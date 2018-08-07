@@ -1,4 +1,7 @@
 import wx
+import time
+import datetime
+import threading
 
 class mainWindow(wx.Frame):
     
@@ -6,6 +9,10 @@ class mainWindow(wx.Frame):
         
         super(mainWindow, self).__init__(*args, **kw) # Runs __init__ of parent
         self._initialLayout()
+        self._bindEvents()
+        
+        self.flag = 0
+        
         self.Show()
         
     def _initialLayout(self):
@@ -46,8 +53,8 @@ class mainWindow(wx.Frame):
         self.comboBoxCMPIP = wx.ComboBox(self.panel2, size = (100,23), value = "192.168.191.3", choices = ["192.168.191.2", "192.168.191.3", "192.168.191.4"])
         self.guageACM = wx.Gauge(self.panel2, size = (100,23), range=100, style = wx.GA_HORIZONTAL)
         self.guageCMP = wx.Gauge(self.panel2, size = (100,23), range=100, style = wx.GA_HORIZONTAL)
-        self.battACM = 50
-        self.battCMP = 75
+        self.battACM = 0
+        self.battCMP = 0
         self.guageACM.SetValue(self.battACM) # Use this to change the percentage to show
         self.guageCMP.SetValue(self.battCMP) # Use this to change the percentage to show
         self.textBattACM = wx.StaticText(self.panel2, label = str(self.battACM)+"%", style = wx.ALIGN_LEFT)
@@ -194,6 +201,10 @@ class mainWindow(wx.Frame):
         self.controlTextSign5 = wx.TextCtrl(self.panel4, size = (50,23), value = "1")
         self.controlTextSign6 = wx.TextCtrl(self.panel4, size = (50,23), value = "1")
         self.buttonEmergency = wx.Button(self.panel4, label="EMERGENCY STOP", size = (100,30))
+        self.buttonEmergency.SetBackgroundColour('red') 
+        self.buttonEmergency.SetForegroundColour('white')
+        font = wx.Font(pointSize=18, family=wx.DEFAULT, style=wx.ITALIC, weight=wx.BOLD)
+        self.buttonEmergency.SetFont(font)
         
         self.row5 = wx.BoxSizer(wx.HORIZONTAL)
         self.row5.Add(self.buttonSendServoCommand,   proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 2)
@@ -215,12 +226,12 @@ class mainWindow(wx.Frame):
         self.smallColumn1.Add(self.textCe, proportion = 1, flag = wx.EXPAND|wx.TOP, border = 7)
         self.smallColumn1.Add(self.textCr, proportion = 1, flag = wx.EXPAND|wx.TOP, border = 7)
         self.smallColumn2 = wx.BoxSizer(wx.VERTICAL)
-        self.smallColumn2.Add(self.controlTextDa,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 2)
-        self.smallColumn2.Add(self.controlTextDe,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 2)
-        self.smallColumn2.Add(self.controlTextDr,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 2)
-        self.smallColumn2.Add(self.controlTextCa,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 2)
-        self.smallColumn2.Add(self.controlTextCe,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 2)
-        self.smallColumn2.Add(self.controlTextCr,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 2)
+        self.smallColumn2.Add(self.controlTextDa,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 5)
+        self.smallColumn2.Add(self.controlTextDe,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 5)
+        self.smallColumn2.Add(self.controlTextDr,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 5)
+        self.smallColumn2.Add(self.controlTextCa,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 5)
+        self.smallColumn2.Add(self.controlTextCe,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 5)
+        self.smallColumn2.Add(self.controlTextCr,           proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 5)
         self.smallColumn3 = wx.BoxSizer(wx.VERTICAL)
         self.smallColumn3.Add(self.checkBoxCH1,             proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 2)
         self.smallColumn3.Add(self.checkBoxCH2,             proportion = 1, flag = wx.ALIGN_CENTRE_HORIZONTAL|wx.ALL, border = 2)
@@ -297,6 +308,7 @@ class mainWindow(wx.Frame):
         
         self.textData = wx.StaticText(self.panel6, label = "...", size=(100,100))
         self.boxTitle = wx.StaticBox(self.panel6, -1, "Data")
+        self.panel6.SetDoubleBuffered(True)
         
         self.row7 = wx.StaticBoxSizer(self.boxTitle, wx.HORIZONTAL)
         self.row7.Add(self.textData, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
@@ -304,22 +316,74 @@ class mainWindow(wx.Frame):
         
         self.panel7 = wx.Panel(self)
         
-        self.controlTextLog = wx.TextCtrl(self.panel7)
+        self.controlTextLog = wx.TextCtrl(self.panel7, size=(100,150), style=wx.TE_RICH2|wx.TE_MULTILINE|wx.TE_READONLY)
         
         self.row8 = wx.BoxSizer(wx.HORIZONTAL)
         self.row8.Add(self.controlTextLog, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
         self.panel7.SetSizerAndFit(self.row8)
         
+        self.panel8 = wx.Panel(self)
+        
+        self.buttonClear   = wx.Button(self.panel8, label="Clear", size = (100,30))
+        self.buttonSaveLog = wx.Button(self.panel8, label="Save log", size = (100,30))
+        
+        self.row9 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row9.Add(self.buttonClear, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.row9.Add(self.buttonSaveLog, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.panel8.SetSizerAndFit(self.row9)
+        
         self.panelSizer = wx.BoxSizer(wx.VERTICAL)
         self.panelSizer.Add(self.panel1, proportion = 0, flag = wx.EXPAND)
-        self.panelSizer.Add(self.panel2, proportion = 1, flag = wx.EXPAND)
+        self.panelSizer.Add(self.panel2, proportion = 0, flag = wx.EXPAND)
         self.panelSizer.Add(self.panel3, proportion = 0, flag = wx.EXPAND)
         self.panelSizer.Add(self.panel4, proportion = 0, flag = wx.EXPAND)
         self.panelSizer.Add(self.panel5, proportion = 0, flag = wx.EXPAND)
         self.panelSizer.Add(self.panel6, proportion = 0, flag = wx.EXPAND)
         self.panelSizer.Add(self.panel7, proportion = 1, flag = wx.EXPAND)
+        self.panelSizer.Add(self.panel8, proportion = 0, flag = wx.EXPAND)
         self.SetSizerAndFit(self.panelSizer)
         
+    def _bindEvents(self):
+        
+        self.Bind(wx.EVT_BUTTON, self._test, self.buttonResetRigPosition)
+        
+        
+    def _log(self, txt):
+        
+        text = txt
+        timestamp = time.time()
+        timestampString = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S.%f')
+        self.controlTextLog.write("\n" + timestampString[0:23]+ ": " + text)
+        
+        
+    def _test(self, event):
+        
+        if self.flag == 0:
+            self.flag = 1
+            try:
+                dataThread = threading.Thread(target=self._test2)
+                dataThread.daemon = True
+                dataThread.start()
+            except Exception, errtxt:
+                print errtxt
+        else:
+            self.flag = 0
+            
+        self._log(str(self.flag))
+        
+        
+    def _test2(self):
+        
+        while True:
+            if self.flag == 1:
+                ts = time.time()
+                st = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S.%f')
+                self.textData.SetLabel(st + '\n' + st + '\n' + st)
+                #time.sleep(0.0001)
+            else:
+                break
+        return
+                
         
 
 if __name__ == '__main__':
