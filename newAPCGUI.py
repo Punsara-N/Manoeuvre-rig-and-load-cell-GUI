@@ -19,13 +19,23 @@ class mainWindow(wx.Frame):
         
         self.SetTitle("Access Point Center - Manoeuvre rig - University of Bristol")
         
+        self.menuBar = wx.MenuBar()
+        self.menuFile = wx.Menu()
+        self.menuItemReset = self.menuFile.Append(wx.ID_ANY, "Reset")
+        self.menuFile.AppendSeparator()
+        self.menuItemExit = self.menuFile.Append(wx.ID_ANY, "Exit", "Closes the window")
+        self.menuBar.Append(self.menuFile, title="&File")
+        self.SetMenuBar(self.menuBar)
+        
+        self.CreateStatusBar()
+        
         self.panel1 = wx.Panel(self)
         
         self.buttonStart            = wx.Button(self.panel1, label="Start", size = (100,30))
         self.textHost               = wx.StaticText(self.panel1, label = "Host:", style = wx.ALIGN_RIGHT)
-        self.controlTextHost        = wx.TextCtrl(self.panel1, size = (100,23))
+        self.controlTextHost        = wx.TextCtrl(self.panel1, size = (100,23), value = "192.168.191.5")
         self.textMano               = wx.StaticText(self.panel1, label = "ManoSer:", style = wx.ALIGN_RIGHT)
-        self.controlTextMano        = wx.TextCtrl(self.panel1, size = (100,23))
+        self.controlTextMano        = wx.TextCtrl(self.panel1, size = (100,23), value = "COM6")
         self.buttonSetBaseTime      = wx.Button(self.panel1, label="Set base time", size = (100,30))
         self.buttonSyncTime         = wx.Button(self.panel1, label="Sync time", size = (100,30))
         self.controlTextExpNumber   = wx.TextCtrl(self.panel1, size = (50,23))
@@ -332,20 +342,102 @@ class mainWindow(wx.Frame):
         self.row9.Add(self.buttonSaveLog, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
         self.panel8.SetSizerAndFit(self.row9)
         
-        self.panelSizer = wx.BoxSizer(wx.VERTICAL)
-        self.panelSizer.Add(self.panel1, proportion = 0, flag = wx.EXPAND)
-        self.panelSizer.Add(self.panel2, proportion = 0, flag = wx.EXPAND)
-        self.panelSizer.Add(self.panel3, proportion = 0, flag = wx.EXPAND)
-        self.panelSizer.Add(self.panel4, proportion = 0, flag = wx.EXPAND)
-        self.panelSizer.Add(self.panel5, proportion = 0, flag = wx.EXPAND)
-        self.panelSizer.Add(self.panel6, proportion = 0, flag = wx.EXPAND)
-        self.panelSizer.Add(self.panel7, proportion = 1, flag = wx.EXPAND)
-        self.panelSizer.Add(self.panel8, proportion = 0, flag = wx.EXPAND)
-        self.SetSizerAndFit(self.panelSizer)
+        self.panel9 = wx.Panel(self)
+        
+        self.textLoadCellProfile = wx.StaticText(self.panel9, label = "Load cell profile:", style = wx.ALIGN_LEFT)
+        self.controlTextLoadCellProfile = wx.TextCtrl(self.panel9, size = (150,23), value = "DefaultProfile.xml")
+        self.buttonDiscover = wx.Button(self.panel9, label="Discover", size = (100,30))
+        self.buttonConnect = wx.Button(self.panel9, label="Connect", size = (100,30))
+        self.textIPAddress = wx.StaticText(self.panel9, label = "IP Address:", style = wx.ALIGN_LEFT)
+        self.controlTextIPAddress = wx.TextCtrl(self.panel9, size = (150,23), value = "192.168.191.6")
+        self.textRate = wx.StaticText(self.panel9, label = "Rate (Hz):", style = wx.ALIGN_LEFT)
+        self.controlTextRate = wx.TextCtrl(self.panel9, size = (50,23), value = "244")
+        self.buttonApplyRate = wx.Button(self.panel9, label="Apply rate", size = (100,30))
+        self.textDataType = wx.StaticText(self.panel9, label = "Data type:", style = wx.ALIGN_LEFT)
+        self.buttonFT = wx.Button(self.panel9, label="FT", size = (100,30))
+        self.buttonGuage = wx.Button(self.panel9, label="Gage", size = (100,30))
+        self.textSaveFile = wx.StaticText(self.panel9, label = "Save file:", style = wx.ALIGN_LEFT)
+        self.controlSaveFile = wx.TextCtrl(self.panel9, size = (150,23), value = "")
+        self.buttonCollectData = wx.Button(self.panel9, label="Collect data", size = (100,30))
+        
+        #self.Drawcircle(self.panel9)
+        #self.panel9.Bind(wx.EVT_PAINT, self.Drawcircle)
+        #self.Bind(wx.EVT_PAINT, self.Drawcircle)
+        #self.circle = self.Drawcircle()
+        self.Drawcircle()
+        
+        self.column4 = wx.BoxSizer(wx.VERTICAL)
+        self.row10 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row10.Add(self.textLoadCellProfile, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
+        self.row10.Add(self.controlTextLoadCellProfile, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.row11 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row11.Add(self.buttonDiscover, proportion = 1, flag = wx.ALL, border = 5)
+        self.row11.Add(self.buttonConnect, proportion = 1, flag = wx.ALL, border = 5)
+        self.row12 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row12.Add(self.textIPAddress, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
+        self.row12.Add(self.controlTextIPAddress, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.row13 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row13.Add(self.textRate, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
+        self.row131 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row131.Add(self.controlTextRate, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
+        self.row131.Add(self.buttonApplyRate, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.row13.Add(self.row131, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.row14 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row14.Add(self.textDataType, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
+        self.row141 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row141.Add(self.buttonFT, proportion = 1, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
+        self.row141.Add(self.buttonGuage, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.row14.Add(self.row141, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.row15 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row15.Add(self.textSaveFile, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
+        self.row15.Add(self.controlSaveFile, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.row16 = wx.BoxSizer(wx.HORIZONTAL)
+        self.row16.Add(self.buttonCollectData, proportion = 1, flag = wx.ALL, border = 5)
+        self.column4.Add(self.row10, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.column4.Add(self.row11, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.column4.Add(self.row12, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.column4.Add(self.row13, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.column4.Add(self.row14, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.column4.Add(self.row15, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.column4.Add(self.row16, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        #self.column4.Add(self.circle, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.panel9.SetSizerAndFit(self.column4)
+        
+        
+        self.panelSizerV = wx.BoxSizer(wx.VERTICAL)
+        self.panelSizerV.Add(self.panel1, proportion = 0, flag = wx.EXPAND)
+        self.panelSizerV.Add(self.panel2, proportion = 0, flag = wx.EXPAND)
+        self.panelSizerV.Add(self.panel3, proportion = 0, flag = wx.EXPAND)
+        self.panelSizerV.Add(self.panel4, proportion = 0, flag = wx.EXPAND)
+        self.panelSizerV.Add(self.panel5, proportion = 0, flag = wx.EXPAND)
+        self.panelSizerV.Add(self.panel6, proportion = 0, flag = wx.EXPAND)
+        self.panelSizerV.Add(self.panel7, proportion = 1, flag = wx.EXPAND)
+        self.panelSizerV.Add(self.panel8, proportion = 0, flag = wx.EXPAND)
+        self.panelSizerH = wx.BoxSizer(wx.HORIZONTAL)
+        self.panelSizerH.Add(self.panelSizerV, proportion = 0, flag = wx.EXPAND)
+        self.panelSizerH.Add(self.panel9, proportion = 1, flag = wx.EXPAND)
+        self.SetSizerAndFit(self.panelSizerH)
         
     def _bindEvents(self):
         
         self.Bind(wx.EVT_BUTTON, self._test, self.buttonResetRigPosition)
+        self.Bind(wx.EVT_MENU, self._onExit, self.menuItemExit)
+        
+    
+    def Drawcircle(self):
+        
+        dc = wx.ClientDC(self.panel9)
+        #dc.Clear()
+        dc.SetBrush(wx.Brush(wx.Colour(255,255,255))) 
+        circle = dc.DrawCircle(100,100,50)
+        return circle
+        
+        
+    def _onExit(self, event):
+        
+        self.SetStatusText("Exiting...")
+        self._log("Exiting...")
+        self.Close(True)
         
         
     def _log(self, txt):
