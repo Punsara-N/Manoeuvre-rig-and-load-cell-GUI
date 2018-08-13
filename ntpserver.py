@@ -372,11 +372,12 @@ class NTPServer():
             except KeyboardInterrupt:
                 print "Exiting..."
                 stopFlag = True
-                recvThread.join()
-                workThread.join()
+                self.recvThread.join()
+                self.workThread.join()
                 print "Exited"
                 break
         '''
+        
         
     def stopServer(self):
         
@@ -391,36 +392,7 @@ class NTPServer():
             
 if __name__ == '__main__':
     
-    class test():
-        
-        def __init__(self):
-            
-            self.stringInputOutput = StringIO()
-        
-        def write(self, text):
-            
-            self.stringInputOutput.write(text)
-            self.i = self.stringInputOutput.getvalue()
-            
-        def get(self):
-            
-            print self.i
-    
-
-    old_stdout = sys.stdout
-    #sys.stdout = mystdout = StringIO()
-    sys.stdout = testtest = test()
-    
-    #server = NTPServer()
-    #time.sleep(5)
-    #server.stopServer()
-    
-    print "Hello"
-    print "World"
-    
-    sys.stdout = old_stdout
-    
-    #print mystdout.getvalue()
-    testtest.get()
-    #print testtest.stringInputOutput.getvalue()
+    server = NTPServer()
+    time.sleep(5)
+    server.stopServer()
         
