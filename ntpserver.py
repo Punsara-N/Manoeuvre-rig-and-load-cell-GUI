@@ -391,21 +391,36 @@ class NTPServer():
             
 if __name__ == '__main__':
     
-    def test(txt):
-        print txt
+    class test():
+        
+        def __init__(self):
+            
+            self.stringInputOutput = StringIO()
+        
+        def write(self, text):
+            
+            self.stringInputOutput.write(text)
+            self.i = self.stringInputOutput.getvalue()
+            
+        def get(self):
+            
+            print self.i
     
+
     old_stdout = sys.stdout
-    sys.stdout = mystdout = StringIO()
+    #sys.stdout = mystdout = StringIO()
+    sys.stdout = testtest = test()
     
-    server = NTPServer()
-    time.sleep(5)
-    server.stopServer()
+    #server = NTPServer()
+    #time.sleep(5)
+    #server.stopServer()
     
-    print "Hi"
+    print "Hello"
+    print "World"
     
     sys.stdout = old_stdout
     
     #print mystdout.getvalue()
-    
-    
+    testtest.get()
+    #print testtest.stringInputOutput.getvalue()
         
