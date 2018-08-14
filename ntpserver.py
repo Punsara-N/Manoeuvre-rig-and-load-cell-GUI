@@ -3,12 +3,10 @@ import socket
 import struct
 import time
 import Queue
-import mutex
 import threading
 import select
-from cStringIO import StringIO
-import sys
-import myLog
+import win32serviceutil
+import admin
 
 
 def system_to_ntp_time(timestamp):
@@ -342,7 +340,8 @@ class NTPServer():
         
         taskQueue = Queue.Queue()
         
-        print "Note: Make sure W32Time service is stopped to ensure NTP port is accessible"
+        win32serviceutil.StopService('W32Time') # Stops windows time service
+        #print "Note: Make sure W32Time service is stopped to ensure NTP port is accessible"
         
         print "Starting NTP server..."
         
@@ -395,6 +394,7 @@ class NTPServer():
         #time.sleep(1)
         #self.recvThread.join()
         #self.workThread.join()
+        win32serviceutil.StartService('W32Time')
         print "Stopped"
             
             
