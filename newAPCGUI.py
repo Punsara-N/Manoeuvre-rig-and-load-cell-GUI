@@ -3,6 +3,8 @@ import time
 import datetime
 import threading
 from LEDIndicatorGUI import LED
+import myLog
+import ntpserver
 
 class mainWindow(wx.Frame):
     
@@ -10,6 +12,7 @@ class mainWindow(wx.Frame):
         
         super(mainWindow, self).__init__(*args, **kw) # Runs __init__ of parent
         self._initialLayout()
+        self._startLog()
         self._bindEvents()
         
         self.flag = 0
@@ -573,6 +576,32 @@ class mainWindow(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self._test, self.buttonResetRigPosition)
         self.Bind(wx.EVT_MENU, self._onExit, self.menuItemExit)
         self.panelLED1.Bind(wx.EVT_SIZE, self._refresh)
+        self.Bind(wx.EVT_BUTTON, self.myLog.save, self.buttonSaveLog)
+        self.Bind(wx.EVT_BUTTON, self.clearLog, self.buttonClear)
+        self.Bind(wx.EVT_BUTTON, self.startNTPServer, self.buttonStartNTPServer)
+        self.Bind(wx.EVT_BUTTON, self.stopNTPServer, self.buttonStopNTPServer)
+        
+        
+    def startNTPServer(self, event):
+        
+        try:
+            self.NTPServer = ntpserver.NTPServer()
+        except Exception as error:
+            print error
+        
+        
+    def stopNTPServer(self, event):
+        
+        try:
+            self.NTPServer.stopServer()
+        except Exception as error:
+            print error
+        
+        
+    def clearLog(self, event):
+        
+        self.controlTextLog.Clear()
+        self.myLog.clear()
         
     
     def _refresh(self, event):
@@ -583,16 +612,14 @@ class mainWindow(wx.Frame):
     def _onExit(self, event):
         
         self.SetStatusText("Exiting...")
-        self._log("Exiting...")
+        print "Exiting..."
+        self.myLog.close()
         self.Close(True)
         
         
-    def _log(self, txt):
+    def _startLog(self):
         
-        text = txt
-        timestamp = time.time()
-        timestampString = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S.%f')
-        self.controlTextLog.write("\n" + timestampString[0:23]+ ": " + text)
+        self.myLog = myLog.myLog(self)
         
         
     def _test(self, event):
@@ -608,7 +635,7 @@ class mainWindow(wx.Frame):
         else:
             self.flag = 0
             
-        self._log(str(self.flag))
+        print str(self.flag)
         
         
     def _test2(self):

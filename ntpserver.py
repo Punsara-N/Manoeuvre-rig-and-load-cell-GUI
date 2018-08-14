@@ -8,9 +8,8 @@ import threading
 import select
 from cStringIO import StringIO
 import sys
+import myLog
 
-taskQueue = Queue.Queue()
-stopFlag = False
 
 def system_to_ntp_time(timestamp):
     """Convert a system time to a NTP time.
@@ -259,13 +258,14 @@ class NTPPacket:
         
 
 class RecvThread(threading.Thread):
-    def __init__(self,socket):
+    def __init__(self,socket,queue):
         threading.Thread.__init__(self)
         self.socket = socket
+        self.stopFlag = False
+        self.taskQueue = queue
     def run(self):
-        global taskQueue,stopFlag
         while True:
-            if stopFlag == True:
+            if self.stopFlag == True:
                 print "RecvThread Ended"
                 break
             rlist,wlist,elist = select.select([self.socket],[],[],1);
@@ -275,22 +275,23 @@ class RecvThread(threading.Thread):
                     try:
                         data,addr = tempSocket.recvfrom(1024)
                         recvTimestamp = recvTimestamp = system_to_ntp_time(time.time())
-                        taskQueue.put((data,addr,recvTimestamp))
+                        self.taskQueue.put((data,addr,recvTimestamp))
                     except socket.error,msg:
                         print msg;
 
 class WorkThread(threading.Thread):
-    def __init__(self,socket):
+    def __init__(self,socket,queue):        
         threading.Thread.__init__(self)
         self.socket = socket
+        self.stopFlag = False
+        self.taskQueue = queue
     def run(self):
-        global taskQueue,stopFlag
         while True:
-            if stopFlag == True:
+            if self.stopFlag == True:
                 print "WorkThread Ended"
                 break
             try:
-                data,addr,recvTimestamp = taskQueue.get(timeout=1)
+                data,addr,recvTimestamp = self.taskQueue.get(timeout=1)
                 recvPacket = NTPPacket()
                 recvPacket.from_data(data)
                 timeStamp_high,timeStamp_low = recvPacket.GetTxTimeStamp()
@@ -339,6 +340,8 @@ class NTPServer():
     
     def __init__(self):
         
+        taskQueue = Queue.Queue()
+        
         print "Note: Make sure W32Time service is stopped to ensure NTP port is accessible"
         
         print "Starting NTP server..."
@@ -358,10 +361,15 @@ class NTPServer():
         soc.bind(addr)
                     
         print "local socket: ", soc.getsockname();
-        self.recvThread = RecvThread(soc)
+        print "Active threads:" + str(threading.active_count())
+        self.recvThread = RecvThread(soc, taskQueue)
+        self.recvThread.daemon = True
         self.recvThread.start()
-        self.workThread = WorkThread(soc)
+        print "Active threads:" + str(threading.active_count())
+        self.workThread = WorkThread(soc, taskQueue)
+        self.workThread.daemon = True
         self.workThread.start()
+        print "Active threads:" + str(threading.active_count())
         
         print "NTP server started!"
         
@@ -381,17 +389,17 @@ class NTPServer():
         
     def stopServer(self):
         
-        global stopFlag
-        
-        print "Exiting..."
-        stopFlag = True
-        self.recvThread.join()
-        self.workThread.join()
-        print "Exited"
+        print "Stopping NTP server..."
+        self.recvThread.stopFlag = True
+        self.workThread.stopFlag = True
+        #time.sleep(1)
+        #self.recvThread.join()
+        #self.workThread.join()
+        print "Stopped"
             
             
 if __name__ == '__main__':
-    
+
     server = NTPServer()
     time.sleep(5)
     server.stopServer()
