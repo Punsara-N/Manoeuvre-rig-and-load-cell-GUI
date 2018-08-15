@@ -375,7 +375,7 @@ Unused bits must be set to 0.  '''))
                                    validator=MyValidator(DIGIT_ONLY))
         boxH.Add(self.NofCycles, 0, wx.ALIGN_CENTER, 5)
         boxV.Add(boxH, 0, wx.ALIGN_CENTER, 5)
-#######################################################################################
+
         boxH = wx.BoxSizer(wx.HORIZONTAL)
         boxH.Add(wx.StaticText(panel, wx.ID_ANY, "Da="), 0,
                 wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)
@@ -635,6 +635,7 @@ Unused bits must be set to 0.  '''))
         self.Bind(wx.EVT_MENU, self.OnClose, menu_close)
         self.Bind(EVT_LOG, self.OnLog)
         self.Bind(wx.EVT_BUTTON, self.OnStart, self.btnStart)
+        #################################################################################
         self.Bind(wx.EVT_BUTTON, self.OnRmtAT, self.btnRmtAT)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.OnSyncGND, self.btnGNDsynct)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.OnRecALL, self.btnALLrec)

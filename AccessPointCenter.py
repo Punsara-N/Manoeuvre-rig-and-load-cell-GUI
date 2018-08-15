@@ -24,7 +24,7 @@ License along with this library.
 
 import wx
 from multiprocessing import Process, Queue, freeze_support
-from AccessPointFrame import MyFrame #from newAPCGUI import mainWindow as MyFrame 
+from newAPCGUI import mainWindow as MyFrame #from AccessPointFrame import MyFrame
 from MessageCenter import worker
 from DynamicGraph import drawer
 
@@ -56,7 +56,10 @@ class MyApp(wx.App):
         """
         Initialise the App with a Frame.
         """
-        self.frame = MyFrame(None, -1, 'AccessPointCenter', self.process,
+        #self.frame = MyFrame(None, -1, 'AccessPointCenter', self.process,
+        #                     self.gui2msgcQueue, self.msgc2guiQueue,
+        #                     self.gui2drawerQueue)
+        self.frame = MyFrame(self.process,
                              self.gui2msgcQueue, self.msgc2guiQueue,
                              self.gui2drawerQueue)
         #self.frame.Show(True)
