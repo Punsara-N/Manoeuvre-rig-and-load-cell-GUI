@@ -24,7 +24,7 @@ License along with this library.
 
 import wx
 from multiprocessing import Process, Queue, freeze_support
-from AccessPointFrame import MyFrame
+from AccessPointFrame import MyFrame #from newAPCGUI import mainWindow as MyFrame 
 from MessageCenter import worker
 from DynamicGraph import drawer
 
@@ -50,10 +50,6 @@ class MyApp(wx.App):
         self.msgc2guiQueue = msgc2guiQueue
         self.gui2drawerQueue=gui2drawerQueue
         wx.App.__init__(self, redirect, filename, useBestVisual, clearSigInt)
-#        self.app = wx.App(False)
-#        self.frame = MyFrame(None, -1, 'AccessPointCenter', self.process,
-#                             self.gui2msgcQueue, self.msgc2guiQueue,
-#                             self.gui2drawerQueue)
         
         
     def OnInit(self):
@@ -63,7 +59,7 @@ class MyApp(wx.App):
         self.frame = MyFrame(None, -1, 'AccessPointCenter', self.process,
                              self.gui2msgcQueue, self.msgc2guiQueue,
                              self.gui2drawerQueue)
-#        self.frame.Show(True)
+        #self.frame.Show(True)
         return True
 
 

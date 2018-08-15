@@ -375,7 +375,7 @@ Unused bits must be set to 0.  '''))
                                    validator=MyValidator(DIGIT_ONLY))
         boxH.Add(self.NofCycles, 0, wx.ALIGN_CENTER, 5)
         boxV.Add(boxH, 0, wx.ALIGN_CENTER, 5)
-
+#######################################################################################
         boxH = wx.BoxSizer(wx.HORIZONTAL)
         boxH.Add(wx.StaticText(panel, wx.ID_ANY, "Da="), 0,
                 wx.ALIGN_CENTER_VERTICAL | wx.LEFT, 5)

@@ -5,12 +5,90 @@ import threading
 from LEDIndicatorGUI import LED
 import myLog
 import ntpserver
+from ConfigParser import SafeConfigParser
+import string
+
+ALPHA_ONLY = 1
+DIGIT_ONLY = 2
+HEX_ONLY = 3
+
+def _(ori_string):
+    return ori_string
+
+class MyValidator(wx.PyValidator):
+    def __init__(self, flag=None, pyVar=None):
+        wx.PyValidator.__init__(self)
+        self.flag = flag
+        self.Bind(wx.EVT_CHAR, self.OnChar)
+        self.hexs = string.digits + 'abcdefABCDEF'
+
+    def Clone(self):
+        return MyValidator(self.flag)
+
+    def Validate(self, win):
+        tc = self.GetWindow()
+        val = tc.GetValue()
+
+        if self.flag == ALPHA_ONLY:
+            return all([i in string.letters for i in val])
+
+        elif self.flag == DIGIT_ONLY:
+            return all([i in string.digits for i in val])
+
+        elif self.flag == HEX_ONLY:
+            return all([i in self.hexs for i in val])
+
+        return True
+
+    def OnChar(self, event):
+        key = event.GetKeyCode()
+
+        if key < wx.WXK_SPACE or key == wx.WXK_DELETE or key > 255:
+            event.Skip()
+            return
+
+        if self.flag == HEX_ONLY and chr(key) in self.hexs:
+            event.Skip()
+            return
+
+        if self.flag == ALPHA_ONLY and chr(key) in string.letters:
+            event.Skip()
+            return
+
+        if self.flag == DIGIT_ONLY and chr(key) in string.digits:
+            event.Skip()
+            return
+
+        if self.flag == DIGIT_ONLY and chr(key) in '-':
+            event.Skip()
+            return
+
+        if self.flag == DIGIT_ONLY and chr(key) in '.':
+            event.Skip()
+            return
+
+        if not wx.Validator_IsSilent():
+            wx.Bell()
+
+        # Returning without calling even.Skip eats the event before it
+        # gets to the text control
+        return
 
 class mainWindow(wx.Frame):
     
-    def __init__(self, *args, **kw):
+    def __init__(self, process=[None,None], gui2msgcQueue=None, msgc2guiQueue=None, gui2drawerQueue=None):
         
-        super(mainWindow, self).__init__(*args, **kw) # Runs __init__ of parent
+        super(mainWindow, self).__init__(None) # Runs __init__ of parent
+        
+        self.msg_process = process[0]
+        self.graph_process = process[1]
+        self.gui2msgcQueue = gui2msgcQueue
+        self.msgc2guiQueue = msgc2guiQueue
+        self.gui2drawerQueue = gui2drawerQueue
+        
+        self.parser = SafeConfigParser()
+        self.parser.read('config.ini')
+        
         self._initialLayout()
         self._startLog()
         self._bindEvents()
@@ -25,10 +103,11 @@ class mainWindow(wx.Frame):
         
         self.menuBar = wx.MenuBar()
         self.menuFile = wx.Menu()
-        self.menuItemReset = self.menuFile.Append(wx.ID_ANY, "Reset")
+        self.menuItemEmergencyStop = self.menuFile.Append(wx.ID_ANY, "&Emergency Stop\tCTRL+E", "Emergency Stop")
+        self.menuItemEmergencyReset = self.menuFile.Append(wx.ID_ANY, "Emergency &Cancel", "Emergency Canceled")
         self.menuFile.AppendSeparator()
-        self.menuItemExit = self.menuFile.Append(wx.ID_ANY, "Exit", "Closes the window")
-        self.menuBar.Append(self.menuFile, title="&File")
+        self.menuItemExit = self.menuFile.Append(wx.ID_ANY, "&Close\tCTRL+Q", "Close this frame")
+        self.menuBar.Append(self.menuFile, "&File")
         self.SetMenuBar(self.menuBar)
         
         self.CreateStatusBar()
@@ -37,13 +116,17 @@ class mainWindow(wx.Frame):
         
         self.buttonStart            = wx.Button(self.panel1, label="Start", size = (100,30))
         self.textHost               = wx.StaticText(self.panel1, label = "Host:", style = wx.ALIGN_RIGHT)
-        self.controlTextHost        = wx.TextCtrl(self.panel1, size = (100,23), value = "192.168.191.5")
+        self.controlTextHost        = wx.TextCtrl(self.panel1, size = (100,23), value = self.parser.get('host','AP')) # value = "192.168.191.5"
         self.textMano               = wx.StaticText(self.panel1, label = "ManoSer:", style = wx.ALIGN_RIGHT)
-        self.controlTextMano        = wx.TextCtrl(self.panel1, size = (100,23), value = "COM6")
+        self.controlTextMano        = wx.TextCtrl(self.panel1, size = (100,23), value = self.parser.get('host','COM')) # value = "COM6"
         self.buttonSetBaseTime      = wx.Button(self.panel1, label="Set base time", size = (100,30))
-        self.buttonSyncTime         = wx.Button(self.panel1, label="Sync time", size = (100,30))
-        self.controlTextExpNumber   = wx.TextCtrl(self.panel1, size = (50,23))
-        self.buttonRecord           = wx.Button(self.panel1, label="Record", size = (100,30))
+        self.buttonSetBaseTime.Enable(False)
+        self.buttonSyncTime         = wx.ToggleButton(self.panel1, label="Sync time", size = (100,30))
+        self.buttonSyncTime.SetValue(True)
+        self.buttonSyncTime.Enable(False)
+        self.controlTextExpNumber   = wx.TextCtrl(self.panel1, size = (50,23), value = self.parser.get('rec','prefix'), validator = MyValidator(DIGIT_ONLY))
+        self.buttonRecord           = wx.ToggleButton(self.panel1, label="Record", size = (100,30))
+        self.buttonRecord.Enable(False)
         
         self.row1 = wx.BoxSizer(wx.HORIZONTAL)
         self.row1.Add(self.buttonStart,             proportion = 1, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
@@ -59,12 +142,16 @@ class mainWindow(wx.Frame):
         
         self.panel2 = wx.Panel(self)
         
+        AT_CMD = ['MY', 'MK', 'GW', 'SH', 'SL', 'DL', 'C0', 'ID', 'AH', 'MA', 'PL', 'BD', 'AI', 'WR', 'FR',]
+        HOST_LIST = ["192.168.191.2", "192.168.191.3", "192.168.191.4"]
+        
+        self.target = 'GND'
         self.radioButtonGND = wx.RadioButton(self.panel2, label = "GND:")
         self.radioButtonACM = wx.RadioButton(self.panel2, label = "ACM:")
         self.radioButtonCMP = wx.RadioButton(self.panel2, label = "CMP:")
-        self.comboBoxGNDIP = wx.ComboBox(self.panel2, size = (100,23), value = "192.168.191.2", choices = ["192.168.191.2", "192.168.191.3", "192.168.191.4"])
-        self.comboBoxACMIP = wx.ComboBox(self.panel2, size = (100,23), value = "192.168.191.4", choices = ["192.168.191.2", "192.168.191.3", "192.168.191.4"])
-        self.comboBoxCMPIP = wx.ComboBox(self.panel2, size = (100,23), value = "192.168.191.3", choices = ["192.168.191.2", "192.168.191.3", "192.168.191.4"])
+        self.comboBoxGNDIP = wx.ComboBox(self.panel2, size = (100,23), value = self.parser.get('host','GND'), choices = HOST_LIST)
+        self.comboBoxACMIP = wx.ComboBox(self.panel2, size = (100,23), value = self.parser.get('host','ACM'), choices = HOST_LIST)
+        self.comboBoxCMPIP = wx.ComboBox(self.panel2, size = (100,23), value = self.parser.get('host','CMP'), choices = HOST_LIST)
         self.guageACM = wx.Gauge(self.panel2, size = (100,23), range=100, style = wx.GA_HORIZONTAL)
         self.guageCMP = wx.Gauge(self.panel2, size = (100,23), range=100, style = wx.GA_HORIZONTAL)
         self.battACM = 0
@@ -93,6 +180,7 @@ class mainWindow(wx.Frame):
         self.column1.Add(self.row23, proportion = 1, flag = wx.ALIGN_LEFT|wx.ALL, border = 1)
         
         self.buttonActive = wx.Button(self.panel2, label="Active")
+        self.buttonActive.Enable(False)
         
         self.column2 = wx.BoxSizer(wx.VERTICAL)
         self.column2.Add(self.buttonActive, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
@@ -100,9 +188,9 @@ class mainWindow(wx.Frame):
         self.textSimulinkTxPort         = wx.StaticText(self.panel2, label = "Simulink Tx port:", style = wx.ALIGN_RIGHT)
         self.textSimulinkRxPort         = wx.StaticText(self.panel2, label = "Simulink Rx port:", style = wx.ALIGN_RIGHT)
         self.textSimulinkExtraInputs    = wx.StaticText(self.panel2, label = "Simulink extra inputs:", style = wx.ALIGN_RIGHT)
-        self.controlTextSimulinkTxPort         = wx.TextCtrl(self.panel2, size = (120,23), value = "9090")
-        self.controlTextSimulinkRxPort         = wx.TextCtrl(self.panel2, size = (120,23), value = "8080")
-        self.controlTextSimulinkExtraInputs    = wx.TextCtrl(self.panel2, size = (120,23), value = "p1 p2 p3 p4 p5 p6")
+        self.controlTextSimulinkTxPort         = wx.TextCtrl(self.panel2, size = (120,23), value = self.parser.get('simulink','tx'), validator = MyValidator(DIGIT_ONLY))
+        self.controlTextSimulinkRxPort         = wx.TextCtrl(self.panel2, size = (120,23), value = self.parser.get('simulink','rx'), validator = MyValidator(DIGIT_ONLY))
+        self.controlTextSimulinkExtraInputs    = wx.TextCtrl(self.panel2, size = (120,23), value = self.parser.get('simulink','extra'))
         
         self.column3 = wx.BoxSizer(wx.VERTICAL)
         self.row24 = wx.BoxSizer(wx.HORIZONTAL)
@@ -127,13 +215,44 @@ class mainWindow(wx.Frame):
         self.panel3 = wx.Panel(self)
         
         self.buttonSendRemoteAT = wx.Button(self.panel3, label="Send RemoteAT", size = (100,30))
-        self.comboBoxRemoteAT = wx.ComboBox(self.panel3, size = (50,23), value = "MY", choices = ["MY", "1", "2", "3"])
-        self.controlTextRemoteAT = wx.TextCtrl(self.panel3, size = (120,23))
-        self.controlTextRemoteATOption = wx.TextCtrl(self.panel3, size = (30,23), value = "02")
+        self.buttonSendRemoteAT.Enable(False)
+        self.comboBoxRemoteAT = wx.ComboBox(self.panel3, size = (50,23), value = "MY", choices = AT_CMD)
+        self.comboBoxRemoteAT.SetToolTip(wx.ToolTip('''AT Command in TWO characters :
+MY - IP Network Address
+MK - IP Address Mask
+GW - Gateway IP address
+SH - Serial Number High
+SL - Serial Number Low
+DL - Destination Address Low
+C0 - source IP port
+ID - SSID
+AH - Network Type
+MA - IP Addressing Mode. 0=DHCP;1=Static
+PL - Power Level
+BD - baudrate
+AI - Association Indication
+WR - write to flash
+FR - Software Reset
+'''))
+        self.controlTextRemoteAT = wx.TextCtrl(self.panel3, value = "", size = (120,23), validator = MyValidator(HEX_ONLY))
+        self.controlTextRemoteAT.SetToolTip(wx.ToolTip('Hexadecimal Parameter for remote AT Command to set.\nIf blanked, just get the parameter.'))
+        self.controlTextRemoteATOption = wx.TextCtrl(self.panel3, size = (30,23), value = "02", validator = MyValidator(HEX_ONLY))
+        self.controlTextRemoteATOption.SetToolTip(wx.ToolTip('''Bitfield of supported transmission options \nSupported values include the following: \n0x00 - Disable retries and route repair \n0x02 - Apply changes. '''))
         self.buttonSendCommand = wx.Button(self.panel3, label="Send Command", size = (100,30))
-        self.controlTextSendCommand = wx.TextCtrl(self.panel3, size = (120,23))
-        self.controlTextSendCommandOption1 = wx.TextCtrl(self.panel3, size = (30,23), value = "01")
-        self.controlTextSendCommandOption2 = wx.TextCtrl(self.panel3, size = (30,23), value = "01")
+        self.buttonSendCommand.Enable(False)
+        self.controlTextSendCommand = wx.TextCtrl(self.panel3, value = "", size = (120,23))
+        self.controlTextSendCommand.SetToolTip(wx.ToolTip('Text to be sent\nIf in continoous mode, the sent text will be prefixed with "P" and 5-digital index number.'))
+        self.controlTextSendCommandOption1 = wx.TextCtrl(self.panel3, size = (30,23), value = "01", validator = MyValidator(HEX_ONLY))
+        self.controlTextSendCommandOption1.SetToolTip(wx.ToolTip( '''Sets maximum number of hops a broadcast transmission can occur. \nIf set to 0, the broadcast radius will be set to the maximum hops value.'''))
+        self.controlTextSendCommandOption2 = wx.TextCtrl(self.panel3, size = (30,23), value = "01", validator = MyValidator(HEX_ONLY))
+        self.controlTextSendCommandOption2.SetToolTip(wx.ToolTip(
+            '''Bitfield of supported transmission options. Supported values include the following:
+0x01 - Disable retries and route repair
+0x20 - Enable APS encryption (if EE=1)
+0x40 - Use the extended transmission timeout
+Enabling APS encryption presumes the source and destination have been authenticated.  I also decreases the maximum number of RF payload bytes by 4 (below the value reported by NP).
+The extended transmission timeout is needed when addressing sleeping end devices.It also increases the retry interval between retries to compensate for end device polling.See Chapter 4, Transmission Timeouts, Extended Timeout for a description.
+Unused bits must be set to 0.  '''))
         
         self.column = wx.BoxSizer(wx.VERTICAL)
         self.row3 = wx.BoxSizer(wx.HORIZONTAL)
@@ -152,15 +271,19 @@ class mainWindow(wx.Frame):
         
         self.panel4 = wx.Panel(self)
         
-        self.buttonSendServoCommand = wx.Button(self.panel4, label="Send Command", size = (100,30))
-        self.comboBoxCommand = wx.ComboBox(self.panel4, size = (70,23), value = "Reset", choices = ["Reset", "1", "2", "3"])
+        self.buttonSendServoCommand = wx.Button(self.panel4, label="Servo Command", size = (100,30))
+        self.buttonSendServoCommand.Enable(False)
+        self.comboBoxInputType = wx.ComboBox(self.panel4, size = (70,23), choices = ['Reset','Step','Doublet','3-2-1-1','Ramp', 'pitch rate','open loop','LinFreq Sweep','ExpFreq Sweep'])
+        self.comboBoxInputType.SetSelection(0)
         self.textStartTime = wx.StaticText(self.panel4, label = "Start time:", style = wx.ALIGN_RIGHT)
-        self.controlTextSendStartTime = wx.TextCtrl(self.panel4, size = (50,23), value = "500")
+        self.controlTextStartTime = wx.TextCtrl(self.panel4, size = (50,23), value = "500", validator = MyValidator(DIGIT_ONLY))
+        self.controlTextStartTime.SetToolTip(wx.ToolTip('milliseconds'))
         self.textTimeDelta = wx.StaticText(self.panel4, label = "Time Delta:", style = wx.ALIGN_RIGHT)
-        self.controlTextTimeDelta = wx.TextCtrl(self.panel4, size = (50,23), value = "500")
+        self.controlTextTimeDelta = wx.TextCtrl(self.panel4, size = (50,23), value = "500", validator = MyValidator(DIGIT_ONLY))
+        self.controlTextTimeDelta.SetToolTip(wx.ToolTip('milliseconds'))
         self.textNoOfCycles = wx.StaticText(self.panel4, label = "No. of cycles:", style = wx.ALIGN_RIGHT)
-        self.controlTextNoOfCycles = wx.TextCtrl(self.panel4, size = (50,23), value = "1")
-        self.textDa = wx.StaticText(self.panel4, label = "Da=", style = wx.ALIGN_RIGHT)
+        self.controlTextNoOfCycles = wx.TextCtrl(self.panel4, size = (50,23), value = "1", validator = MyValidator(DIGIT_ONLY))
+        self.textDa = wx.StaticText(self.panel4, label = "Da=", style = wx.ALIGN_RIGHT) #############################################################
         self.textDe = wx.StaticText(self.panel4, label = "De=", style = wx.ALIGN_RIGHT)
         self.textDr = wx.StaticText(self.panel4, label = "Dr=", style = wx.ALIGN_RIGHT)
         self.textCa = wx.StaticText(self.panel4, label = "Ca=", style = wx.ALIGN_RIGHT)
@@ -224,9 +347,9 @@ class mainWindow(wx.Frame):
         self.row5.Add(self.buttonSendServoCommand,   proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 2)
         self.bigColumn = wx.BoxSizer(wx.VERTICAL)
         self.smallRow = wx.BoxSizer(wx.HORIZONTAL)
-        self.smallRow.Add(self.comboBoxCommand,             proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 2)
+        self.smallRow.Add(self.comboBoxInputType,             proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 2)
         self.smallRow.Add(self.textStartTime,               proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 2)
-        self.smallRow.Add(self.controlTextSendStartTime,    proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 2)
+        self.smallRow.Add(self.controlTextStartTime,    proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 2)
         self.smallRow.Add(self.textTimeDelta,               proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 2)
         self.smallRow.Add(self.controlTextTimeDelta,        proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 2)
         self.smallRow.Add(self.textNoOfCycles,              proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 2)
@@ -659,5 +782,5 @@ class mainWindow(wx.Frame):
 if __name__ == '__main__':
     
     app = wx.App()
-    GUI = mainWindow(None)
+    GUI = mainWindow()
     app.MainLoop()
