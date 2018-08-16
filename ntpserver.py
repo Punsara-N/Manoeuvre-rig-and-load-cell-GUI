@@ -340,8 +340,11 @@ class NTPServer():
         
         taskQueue = Queue.Queue()
         
-        win32serviceutil.StopService('W32Time') # Stops windows time service
-        #print "Note: Make sure W32Time service is stopped to ensure NTP port is accessible"
+        try:
+            win32serviceutil.StopService('W32Time') # Stops windows time service
+        except Exception as error:
+            print error
+            print "Note: Make sure W32Time service is stopped to ensure NTP port is accessible"
         
         print "Starting NTP server..."
         
@@ -394,7 +397,10 @@ class NTPServer():
         #time.sleep(1)
         #self.recvThread.join()
         #self.workThread.join()
-        win32serviceutil.StartService('W32Time')
+        try:
+            win32serviceutil.StartService('W32Time')
+        except Exception as error:
+            print error
         print "Stopped"
             
             

@@ -121,6 +121,7 @@ class RedirectText(object):
     def write(self, string):
         wx.PostEvent(self.parent, LogEvent(log=string))
 
+
 class MyFrame(wx.Frame):
     """
     Main Frame class.
@@ -635,7 +636,6 @@ Unused bits must be set to 0.  '''))
         self.Bind(wx.EVT_MENU, self.OnClose, menu_close)
         self.Bind(EVT_LOG, self.OnLog)
         self.Bind(wx.EVT_BUTTON, self.OnStart, self.btnStart)
-        #################################################################################
         self.Bind(wx.EVT_BUTTON, self.OnRmtAT, self.btnRmtAT)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.OnSyncGND, self.btnGNDsynct)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.OnRecALL, self.btnALLrec)

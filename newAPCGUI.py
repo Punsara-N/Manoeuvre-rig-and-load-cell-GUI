@@ -14,6 +14,7 @@ import json
 from wx.lib.newevent import NewEvent
 import wx.lib.agw.pygauge as PG
 import os
+import logging
 
 # New Event Declarations
 LogEvent, EVT_LOG = NewEvent()
@@ -91,6 +92,16 @@ class MyValidator(wx.PyValidator):
         # Returning without calling even.Skip eats the event before it
         # gets to the text control
         return
+    
+class RedirectText(object):
+    
+    def __init__(self, parent):
+        self.parent = parent
+
+
+    def write(self, string):
+        wx.PostEvent(self.parent, LogEvent(log=string))
+
 
 class mainWindow(wx.Frame):
     
@@ -113,7 +124,16 @@ class mainWindow(wx.Frame):
         
         self.flag = 0
         
-        self.Show()
+        self.OnInputType(None)
+        
+        self.Show(True)
+        
+        # Set some program flags
+        self.keepgoing = True
+        self.msg_thread = threading.Thread(target=self.processMsgTask)
+        self.msg_thread.daemon = True
+        self.msg_thread.start()
+        
         
     def _initialLayout(self):
         
@@ -567,6 +587,12 @@ Unused bits must be set to 0.  '''))
         self.panel7 = wx.Panel(self)
         
         self.controlTextLog = wx.TextCtrl(self.panel7, size=(100,150), style=wx.TE_RICH2|wx.TE_MULTILINE|wx.TE_READONLY)
+        self.log_txt = self.controlTextLog
+        self.log = logging.getLogger(__name__)
+        self.log.setLevel(logging.INFO)
+        self.log_handle = logging.StreamHandler(RedirectText(self))
+        self.log_handle.setFormatter(logging.Formatter('%(asctime)s:%(message)s'))
+        self.log.addHandler(self.log_handle)
         
         self.row8 = wx.BoxSizer(wx.HORIZONTAL)
         self.row8.Add(self.controlTextLog, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
@@ -576,6 +602,8 @@ Unused bits must be set to 0.  '''))
         
         self.buttonClear   = wx.Button(self.panel8, label="Clear", size = (100,30))
         self.buttonSaveLog = wx.Button(self.panel8, label="Save log", size = (100,30))
+        self.btnClr = self.buttonClear
+        self.btnSaveLog = self.buttonSaveLog
         
         self.row9 = wx.BoxSizer(wx.HORIZONTAL)
         self.row9.Add(self.buttonClear, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
@@ -812,7 +840,7 @@ Unused bits must be set to 0.  '''))
         
         self.Bind(wx.EVT_CLOSE, self.OnClose)
         self.Bind(wx.EVT_MENU, self.OnClose, self.menuItemExit)
-        #self.Bind(EVT_LOG, self.OnLog)
+        self.Bind(EVT_LOG, self.OnLog)
         self.Bind(wx.EVT_BUTTON, self.OnStart, self.btnStart)
         self.Bind(wx.EVT_BUTTON, self.OnRmtAT, self.btnRmtAT)
         self.Bind(wx.EVT_TOGGLEBUTTON, self.OnSyncGND, self.btnGNDsynct)
@@ -822,8 +850,8 @@ Unused bits must be set to 0.  '''))
         self.Bind(wx.EVT_RADIOBUTTON, self.OnChooseACM, self.rbACM)
         self.Bind(wx.EVT_RADIOBUTTON, self.OnChooseCMP, self.rbCMP)
         self.Bind(wx.EVT_RADIOBUTTON, self.OnChooseGND, self.rbGND)
-        #self.Bind(wx.EVT_BUTTON, self.OnClr, self.btnClr)
-        #self.Bind(wx.EVT_BUTTON, self.OnSaveLog, self.btnSaveLog)
+        self.Bind(wx.EVT_BUTTON, self.OnClr, self.btnClr)
+        self.Bind(wx.EVT_BUTTON, self.OnSaveLog, self.btnSaveLog)
         self.Bind(EVT_STAT, self.OnRXSta)
         self.Bind(EVT_ACM_STAT, self.OnACMSta)
         self.Bind(EVT_CMP_STAT, self.OnCMPSta)
@@ -843,8 +871,8 @@ Unused bits must be set to 0.  '''))
         #self.Bind(wx.EVT_BUTTON, self._test, self.buttonResetRigPosition)
         #self.Bind(wx.EVT_MENU, self._onExit, self.menuItemExit)
         self.panelLED1.Bind(wx.EVT_SIZE, self._refresh)
-        self.Bind(wx.EVT_BUTTON, self.myLog.save, self.buttonSaveLog)
-        self.Bind(wx.EVT_BUTTON, self.clearLog, self.buttonClear)
+        #self.Bind(wx.EVT_BUTTON, self.myLog.save, self.buttonSaveLog)
+        #self.Bind(wx.EVT_BUTTON, self.clearLog, self.buttonClear)
         self.Bind(wx.EVT_BUTTON, self.startNTPServer, self.buttonStartNTPServer)
         self.Bind(wx.EVT_BUTTON, self.stopNTPServer, self.buttonStopNTPServer)
         
@@ -860,6 +888,10 @@ Unused bits must be set to 0.  '''))
         self.msg_thread.join()
         self.saveConfig()
         self.Destroy()
+        
+        
+    def OnLog(self, event) :
+        self.log_txt.AppendText(event.log)
         
     
     def saveConfig(self):
@@ -1268,6 +1300,21 @@ Unused bits must be set to 0.  '''))
         
         self.controlTextLog.Clear()
         self.myLog.clear()
+        self.txtRXSta.SetLabel('')
+        self.txtACMSta.SetLabel('')
+        self.txtCMPSta.SetLabel('')
+        self.txtGNDSta.SetLabel('')
+        self.txtACMDat.SetLabel('')
+        self.txtCMPDat.SetLabel('')
+        self.txtGNDDat.SetLabel('')
+
+        self.ggACMbat.SetValue(0)
+        self.ggACMbat.Refresh()
+        self.ggCMPbat.SetValue(0)
+        self.ggCMPbat.Refresh()
+        self.txtGNDinfo.SetLabel('')
+
+        self.gui2msgcQueue.put({'ID': 'CLEAR'})
         
     
     def _refresh(self, event):
