@@ -15,6 +15,9 @@ from wx.lib.newevent import NewEvent
 import wx.lib.agw.pygauge as PG
 import os
 import logging
+from WirelessFTDemoMainScreenController import WirelessFTDemoMainScreenController
+from ProfileConfigWindow import configFrame
+from DiscoveryWindow import discoveryFrame
 
 # New Event Declarations
 LogEvent, EVT_LOG = NewEvent()
@@ -35,16 +38,21 @@ def _(ori_string):
     return ori_string
 
 class MyValidator(wx.PyValidator):
+    
     def __init__(self, flag=None, pyVar=None):
+        
         wx.PyValidator.__init__(self)
         self.flag = flag
         self.Bind(wx.EVT_CHAR, self.OnChar)
         self.hexs = string.digits + 'abcdefABCDEF'
 
+
     def Clone(self):
         return MyValidator(self.flag)
 
+
     def Validate(self, win):
+        
         tc = self.GetWindow()
         val = tc.GetValue()
 
@@ -59,7 +67,9 @@ class MyValidator(wx.PyValidator):
 
         return True
 
+
     def OnChar(self, event):
+        
         key = event.GetKeyCode()
 
         if key < wx.WXK_SPACE or key == wx.WXK_DELETE or key > 255:
@@ -93,6 +103,7 @@ class MyValidator(wx.PyValidator):
         # gets to the text control
         return
     
+    
 class RedirectText(object):
     
     def __init__(self, parent):
@@ -114,6 +125,7 @@ class mainWindow(wx.Frame):
         self.gui2msgcQueue = gui2msgcQueue
         self.msgc2guiQueue = msgc2guiQueue
         self.gui2drawerQueue = gui2drawerQueue
+        self.screenController = WirelessFTDemoMainScreenController()
         
         self.parser = SafeConfigParser()
         self.parser.read('config.ini')
@@ -623,20 +635,29 @@ Unused bits must be set to 0.  '''))
         self.panel9 = wx.Panel(self)
         
         self.textLoadCellProfile = wx.StaticText(self.panel9, label = "Load cell profile:", style = wx.ALIGN_LEFT)
-        self.controlTextLoadCellProfile = wx.TextCtrl(self.panel9, size = (150,23), value = "DefaultProfile.xml")
+        self.controlTextLoadCellProfile = wx.TextCtrl(self.panel9, size = (150,23), value = self.parser.get('main', 'profile'))
         self.buttonDiscover = wx.Button(self.panel9, label="Discover", size = (100,30))
         self.buttonConnect = wx.Button(self.panel9, label="Connect", size = (100,30))
         self.textIPAddress = wx.StaticText(self.panel9, label = "IP Address:", style = wx.ALIGN_LEFT)
-        self.controlTextIPAddress = wx.TextCtrl(self.panel9, size = (150,23), value = "192.168.191.6")
+        self.controlTextIPAddress = wx.TextCtrl(self.panel9, size = (150,23), value = self.parser.get('main', 'ipa'))
         self.textRate = wx.StaticText(self.panel9, label = "Rate (Hz):", style = wx.ALIGN_LEFT)
-        self.controlTextRate = wx.TextCtrl(self.panel9, size = (50,23), value = "244")
+        self.controlTextRate = wx.TextCtrl(self.panel9, size = (50,23), value = self.parser.get('main', 'rate'))
         self.buttonApplyRate = wx.Button(self.panel9, label="Apply rate", size = (100,30))
         self.textDataType = wx.StaticText(self.panel9, label = "Data type:", style = wx.ALIGN_LEFT)
         self.buttonFT = wx.Button(self.panel9, label="FT", size = (100,30))
         self.buttonGuage = wx.Button(self.panel9, label="Gage", size = (100,30))
         self.textSaveFile = wx.StaticText(self.panel9, label = "Save file:", style = wx.ALIGN_LEFT)
-        self.controlSaveFile = wx.TextCtrl(self.panel9, size = (150,23), value = "")
+        self.controlTextSaveFile = wx.TextCtrl(self.panel9, size = (150,23), value = self.parser.get('main', 'savefile'))
         self.buttonCollectData = wx.Button(self.panel9, label="Collect data", size = (100,30))
+        
+        self.textBoxProfile = self.controlTextLoadCellProfile
+        self.textBoxIpa = self.controlTextIPAddress
+        self.textBoxRate = self.controlTextRate
+        self.textBoxSaveFile = self.controlTextSaveFile
+        self.buttonDataTypeFT = self.buttonFT
+        self.buttonDataTypeGage = self.buttonGuage
+        self.buttonSaveFile = self.buttonCollectData
+        self.buttonSaveFile.Disable()
         
         self.panelLED1 = LED(self)
         self.panelLED2 = LED(self)
@@ -672,7 +693,7 @@ Unused bits must be set to 0.  '''))
         self.row14.Add(self.row141, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
         self.row15 = wx.BoxSizer(wx.HORIZONTAL)
         self.row15.Add(self.textSaveFile, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
-        self.row15.Add(self.controlSaveFile, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.row15.Add(self.controlTextSaveFile, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
         self.row16 = wx.BoxSizer(wx.HORIZONTAL)
         self.row16.Add(self.buttonCollectData, proportion = 1, flag = wx.ALL, border = 5)
         self.column4.Add(self.row10, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
@@ -806,14 +827,20 @@ Unused bits must be set to 0.  '''))
         
         text = "Packets: \nPacket rate (Hz): \nClock offset (ms): \nDrop events: \nPackets dropped: \nDrop rate (%): \nOut-of-orders: \nDuplicates:"
         self.textLoadCellPacketStats = wx.StaticText(self.panel11, label = text, style = wx.ALIGN_LEFT)
+        data = " ...\n ...\n ...\n ...\n ...\n ...\n ...\n ..."
+        self.textStats = wx.StaticText(self.panel11, label = data, style = wx.ALIGN_LEFT)
         self.buttonStartNTPServer = wx.Button(self.panel11, label="Start NTP server", size = (100,30))
         self.buttonStopNTPServer = wx.Button(self.panel11, label="Stop NTP server", size = (100,30))
         self.textSycRequestReceived = wx.StaticText(self.panel11, label = "No. sync requests received:", style = wx.ALIGN_LEFT)
         self.textNoSycRequestReceived = wx.StaticText(self.panel11, label = "0", style = wx.ALIGN_LEFT)
         self.buttonProfile = wx.Button(self.panel11, label="Profile", size = (100,30))
         
+        self.rowStats = wx.BoxSizer(wx.HORIZONTAL)
+        self.rowStats.Add(self.textLoadCellPacketStats, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.rowStats.Add(self.textStats, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        
         self.column6 = wx.BoxSizer(wx.VERTICAL)
-        self.column6.Add(self.textLoadCellPacketStats, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 15)
+        self.column6.Add(self.rowStats, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 15)
         self.row19 = wx.BoxSizer(wx.HORIZONTAL)
         self.row19.Add(self.buttonStartNTPServer, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
         self.row19.Add(self.buttonStopNTPServer, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
@@ -868,6 +895,14 @@ Unused bits must be set to 0.  '''))
         self.Bind(wx.EVT_CHOICE, self.OnInputType, self.InputType)
         self.Bind(wx.EVT_BUTTON, self.OnActAll, self.btnAct)
         
+        self.Bind(wx.EVT_BUTTON, self.openDiscoveryWindow, self.buttonDiscover)
+        self.Bind(wx.EVT_BUTTON, self.buttonConnectDisconnectPressed, self.buttonConnect)
+        self.Bind(wx.EVT_BUTTON, self.buttonApplyRatePressed, self.buttonApplyRate)
+        self.Bind(wx.EVT_BUTTON, self.DataTypeFT, self.buttonDataTypeFT)
+        self.Bind(wx.EVT_BUTTON, self.DataTypeGage, self.buttonDataTypeGage)
+        self.Bind(wx.EVT_BUTTON, self.SaveFile, self.buttonSaveFile)
+        self.Bind(wx.EVT_BUTTON, self.openConfigWindow, self.buttonProfile)
+        
         #self.Bind(wx.EVT_BUTTON, self._test, self.buttonResetRigPosition)
         #self.Bind(wx.EVT_MENU, self._onExit, self.menuItemExit)
         self.panelLED1.Bind(wx.EVT_SIZE, self._refresh)
@@ -905,6 +940,10 @@ Unused bits must be set to 0.  '''))
         parser.set('simulink','tx', self.txtMatlabRx.GetValue())
         parser.set('simulink','rx', self.txtMatlabTx.GetValue())
         parser.set('simulink','extra', self.txtMatlabExtra.GetValue())
+        parser.set('main', 'profile', self.textBoxProfile.GetValue())
+        parser.set('main', 'ipa', self.textBoxIpa.GetValue())
+        parser.set('main', 'rate', self.textBoxRate.GetValue())
+        parser.set('main', 'saveFile', self.textBoxSaveFile.GetValue())
         cfg = open('config.ini', 'w')
         parser.write(cfg)
         cfg.close()
@@ -1283,7 +1322,8 @@ Unused bits must be set to 0.  '''))
     def startNTPServer(self, event):
         
         try:
-            self.NTPServer = ntpserver.NTPServer()
+            serverIP = self.controlTextHost.GetValue()
+            self.NTPServer = ntpserver.NTPServer(self, serverIP)
         except Exception as error:
             print error
         
@@ -1333,6 +1373,258 @@ Unused bits must be set to 0.  '''))
     def _startLog(self):
         
         self.myLog = myLog.myLog(self)
+        
+        
+    def openDiscoveryWindow(self, event):
+        
+        self.discoveryFrame(None, self, size = (800,250), style = wx.MINIMIZE_BOX | wx.SYSTEM_MENU | wx.CAPTION | wx.CLIP_CHILDREN)
+        
+    def openConfigWindow(self, event):
+        
+        self.configFrame(None, self, size = (800,800), style = wx.MINIMIZE_BOX | wx.SYSTEM_MENU | wx.CAPTION | wx.CLIP_CHILDREN)
+    
+    def buttonConnectDisconnectPressed(self, event):
+        
+        if self.screenController.m_connected == False:
+            self.connect()
+            if self.screenController.m_connected == True:
+                self.buttonConnect.SetLabel('Disconnect')
+                self.buttonSaveFile.Enable()
+        elif self.screenController.m_connected == True:
+            self.disconnect()
+            if self.screenController.m_connected == False:
+                self.buttonConnect.SetLabel('Connect')
+                self.buttonSaveFile.Disable()
+    
+    def connect(self):
+        
+        ipa = self.textBoxIpa.GetValue() # Getting IP from text box.
+        profile = self.textBoxProfile.GetValue() # Getting profile name from text box.
+        print 'Connecting to:', ipa
+        
+        if profile == '':
+            self.screenController.connectButtonPressed(ipa)
+        else:
+            self.screenController.connectButtonPressed(ipa, profile)
+        
+        if self.screenController.connectingFailed:
+            title = 'Connect timed out'
+            message = 'Could not connect to IP address: ' + self.textBoxIpa.GetValue() + '. If DHCP is on, the device\'s IP address may have changed; consider using the \"Discover\" button.'
+            wx.MessageBox(message, title, wx.OK | wx.ICON_INFORMATION)
+        else: # Connection successful.
+            self.textBoxProfile.SetValue(self.screenController.profile_name)
+            self.textBoxRate.SetValue(self.screenController.m_profile.m_rate)
+            
+            # Starting panels 1 and 2.
+            self.PanelUpdateThread(self)
+            
+            # Plot graphs (panel 3).
+            self.GraphPanel = GraphPanel(self, self.panel3)
+            
+            self.screenController.m_LastPacketTime = self.time.time()*1000
+            self.screenController.m_packets = 0
+            self.screenController.m_drops = 0 
+            self.screenController.m_missedPackets = 0
+            self.screenController.m_rxedPacketsAcc = 0
+            self.screenController.m_OutOfOrders = 0
+            self.screenController.m_Duplicates = 0
+    
+    def disconnect(self):
+        self.screenController.disconnectButtonPressed()
+        self.buttonConnect.SetLabel('Connect')
+        self.buttonSaveFile.Disable()
+        
+        # Stoping graph, recreating panel3
+        try:
+            self.GraphPanel.redraw_timer.Stop()
+            self.panel3.Destroy()
+            self.panel3 = wx.Panel(self, pos=(280,0), size=(770, 600))
+        except Exception as e:
+            print e
+    
+    def buttonApplyRatePressed(self, event):
+        try:
+            packetRate = int(self.textBoxRate.GetValue())
+            setPacketRate = self.screenController.m_btnApplyRatePressed(packetRate)
+        except Exception as e:
+            print e
+
+        self.textBoxRate.SetValue(str(setPacketRate)) # Copy rate back to screen.
+    
+    def DataTypeFT(self, event):
+        print 'Changing data type to FT.'
+        self.screenController.changeGageFT(True)
+    
+    def DataTypeGage(self, event):
+        print 'Changing data type to gage.'
+        self.screenController.changeGageFT(False)
+        
+    def SaveFile(self, event):
+        filename = self.textBoxSaveFile.GetValue()
+        self.screenController.collectDataButtonPressed(filename)
+        
+        self.buttonSaveFile.SetLabel(self.screenController.m_btnCollectData)
+    
+    def SaveSettings(self):
+        try: # Delete config file if it exists.
+            os.remove('config.ini')
+        except OSError:
+            pass
+        
+        try:
+            config = SafeConfigParser()
+            config.read('config.ini')
+            config.add_section('main')
+            config.set('main', 'profile', self.textBoxProfile.GetValue())
+            config.set('main', 'ipa', self.textBoxIpa.GetValue())
+            config.set('main', 'rate', self.textBoxRate.GetValue())
+            config.set('main', 'saveFile', self.textBoxSaveFile.GetValue())
+            
+            with open('config.ini', 'w') as f:
+                config.write(f)
+            
+            print 'Console settings saved.'
+            
+        except Exception as e:
+            print 'Failed to save console settings.'
+            print e
+        
+    def ShowPacketStatsChanged(self, event):
+        value = self.checkBoxStatistics.GetValue()
+        print 'Show packet stats checkbox:', value
+        if value:
+            self.textStatsHeadings.Show()
+            self.textStats.Show()
+        else:
+            self.textStatsHeadings.Hide()
+            self.textStats.Hide()
+            
+class PanelUpdateThread:
+        
+    def __init__(self, main):
+        self.main = main
+        
+        self.timer = wx.Timer(self.main.panel1)
+        self.main.panel1.Bind(wx.EVT_TIMER, self.PanelUpdate, self.timer)
+        #self.timer.Start(1000/self.main.screenController.UI_UPDATE_HZ) # Updates at 30 Hz
+        self.timer.Start(100)
+        
+        #self.main.panel1.SetDoubleBuffered(False) ######## This should fix flickering
+        
+        self.status = True
+        
+        #self.startThread()
+    
+    def startThread(self):
+        import threading
+        self.th = threading.Thread(target=self.PanelUpdate)
+        self.th.start()
+    
+    def PanelUpdate(self, event):
+        
+        #while True:
+        if self.main.screenController.m_readingRecords:
+            
+            try:
+                status1 = self.main.screenController.m_lastSample.getStatusCode1()
+                status2 = self.main.screenController.m_lastSample.getStatusCode2()
+            except:
+                print 'No packets received. Try reconnecting or restarting wireless transmitter.'
+                self.timer.Stop()
+                return
+            
+            # Updating LEDs.
+            self.colourTransducer1   = self.main.screenController.colors[status1       & 0x3]
+            self.colourTransducer2   = self.main.screenController.colors[status1 >>  2 & 0x3]
+            self.colourTransducer3   = self.main.screenController.colors[status1 >>  4 & 0x3]
+            self.colourWLAN          = self.main.screenController.colors[status1 >>  6 & 0x3]
+            self.colourExternalPower = self.main.screenController.colors[status1 >>  8 & 0x3]
+            self.colourLEDBattery    = self.main.screenController.colors[status1 >> 10 & 0x3]
+            self.colourTransducer4   = self.main.screenController.colors[status2       & 0x3]
+            self.colourTransducer5   = self.main.screenController.colors[status2 >>  2 & 0x3]
+            self.colourTransducer6   = self.main.screenController.colors[status2 >>  4 & 0x3]
+            self.main.panel1.Refresh()
+            
+            
+            # Update saturation flags.
+            for transducer in range(0, self.main.screenController.m_model.MAX_SENSORS):
+                status = status1 if (transducer<3) else status2
+                saturated = (status >> (24 + transducer % 3) & 0x1) == 1
+                if saturated:                                   # If the Transducer is saturated,
+                    color = self.main.screenController.SATRED   # Set color  to Saturation red
+                    suffix = ' SAT'                             # Set suffix to SAT
+                else:                                           # If the Transducer is not saturated,
+                    color = 'BLACK'                             # Set color  to black
+                    suffix = '    '                             # Set suffix to blank
+                self.main.m_transLabels[transducer].SetForegroundColour(color)
+                self.main.m_transLabels[transducer].SetLabel('Transducer ' + str(transducer + 1) + suffix)
+                
+            ######################### Update graph.
+                
+            avgMissed  =  100.0 * self.main.screenController.m_rxedPacketsAcc / self.main.screenController.m_rxedPacketsTc # Update statistics.
+            packetRate = 1000.0 * self.main.screenController.m_timeTc         / self.main.screenController.m_timeAcc
+                
+            #print 'Packets: %10d' % self.main.screenController.m_packets
+            #print 'Packet rate (Hz): %10.0f' % packetRate
+            #print 'Latency (ms): %10d' % self.main.screenController.m_lastSample.getLatency()
+            #print 'Drop events: %10d' % self.main.screenController.m_drops
+            #print 'Dropped packets: %10d' % self.main.screenController.m_missedPackets
+            #print 'Drop rate (percentage): %10.2f' % avgMissed
+            #print 'Out-of-order packets: %10d' % self.main.screenController.m_OutOfOrders
+            #print 'Duplicate packets: %10d \n' % self.main.screenController.m_Duplicates
+            
+            label='%10d \n%10.0f \n%10d \n%10d \n%10d \n%10.2f \n%10d \n%10d' % (self.main.screenController.m_packets, 
+                                                                                 packetRate, 
+                                                                                 self.main.screenController.m_lastSample.getLatency(), 
+                                                                                 self.main.screenController.m_drops, 
+                                                                                 self.main.screenController.m_missedPackets,
+                                                                                 avgMissed,
+                                                                                 self.main.screenController.m_OutOfOrders,
+                                                                                 self.main.screenController.m_Duplicates)
+                                                                                 
+            self.main.textStats.SetLabel(label)
+            
+            # Forces and moments values.
+            self.main.screenController.panel.setSensorData(self.main.screenController.m_lastSample)
+            stringForces,stringMoments = self.main.screenController.panel.updatePlot()
+            
+            self.main.textForcesHeading.SetLabel(self.main.screenController.panel.FUnitsHeading)
+            self.main.textMomentsHeading.SetLabel(self.main.screenController.panel.TUnitsHeading)
+            
+            self.main.textForcesValues.SetLabel(stringForces)
+            self.main.textMomentsValues.SetLabel(stringMoments)
+            
+            self.main.textAxesX.Show()
+            self.main.textAxesY.Show()
+            self.main.textAxesZ.Show()
+                    
+            self.main.Refresh()    
+                
+        else:
+            self.timer.Stop()
+            self.main.Refresh()
+            self.panelReset()
+            return 
+        
+    def panelReset(self):
+        # Setting displays to default
+#            self.main.LEDTransducer1  .LEDColour('BLACK')
+#            self.main.LEDTransducer2  .LEDColour('BLACK')
+#            self.main.LEDTransducer3  .LEDColour('BLACK')
+#            self.main.LEDWLAN         .LEDColour('BLACK')
+#            self.main.LEDExternalPower.LEDColour('BLACK')
+#            self.main.LEDBattery      .LEDColour('BLACK')
+#            self.main.LEDTransducer4  .LEDColour('BLACK')
+#            self.main.LEDTransducer5  .LEDColour('BLACK')
+#            self.main.LEDTransducer6  .LEDColour('BLACK')
+        self.main.textStats.SetLabel(' ')
+        self.main.textForcesHeading.SetLabel(' ')
+        self.main.textMomentsHeading.SetLabel(' ')
+        self.main.textForcesValues.SetLabel(' ')
+        self.main.textMomentsValues.SetLabel(' ')
+        self.main.textAxesX.Hide()
+        self.main.textAxesY.Hide()
+        self.main.textAxesZ.Hide()
         
         
     def _test(self, event):

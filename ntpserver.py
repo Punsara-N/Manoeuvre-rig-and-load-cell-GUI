@@ -256,11 +256,13 @@ class NTPPacket:
         
 
 class RecvThread(threading.Thread):
-    def __init__(self,socket,queue):
+    def __init__(self,socket,queue,GUI):
         threading.Thread.__init__(self)
         self.socket = socket
         self.stopFlag = False
         self.taskQueue = queue
+        self.requestsReceived = 0
+        self.GUI = GUI
     def run(self):
         while True:
             if self.stopFlag == True:
@@ -274,6 +276,8 @@ class RecvThread(threading.Thread):
                         data,addr = tempSocket.recvfrom(1024)
                         recvTimestamp = recvTimestamp = system_to_ntp_time(time.time())
                         self.taskQueue.put((data,addr,recvTimestamp))
+                        self.requestsReceived += 1
+                        self.GUI.textNoSycRequestReceived.SetLabel(str(self.requestsReceived))
                     except socket.error,msg:
                         print msg;
 
@@ -336,7 +340,7 @@ class WorkThread(threading.Thread):
 
 class NTPServer():
     
-    def __init__(self):
+    def __init__(self, GUI, serverIP):
         
         taskQueue = Queue.Queue()
         
@@ -347,8 +351,9 @@ class NTPServer():
             print "Note: Make sure W32Time service is stopped to ensure NTP port is accessible"
         
         print "Starting NTP server..."
+        print "Server IP: " + serverIP
         
-        host = '192.168.1.65'#'192.168.191.5'
+        host = serverIP#'192.168.1.65'#'192.168.191.5'
         port = 'ntp' # To check if port is in use, try cmd: netstat -ano|findstr 123
         
         #print socket.getaddrinfo(host, port)
@@ -364,7 +369,7 @@ class NTPServer():
                     
         print "local socket: ", soc.getsockname();
         print "Active threads:" + str(threading.active_count())
-        self.recvThread = RecvThread(soc, taskQueue)
+        self.recvThread = RecvThread(soc, taskQueue, GUI)
         self.recvThread.daemon = True
         self.recvThread.start()
         print "Active threads:" + str(threading.active_count())

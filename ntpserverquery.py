@@ -4,7 +4,7 @@ from time import ctime
 c = ntplib.NTPClient()
 print 'Requesting...'
 #response = c.request('europe.pool.ntp.org', version=3)
-response = c.request('192.168.1.65', version=3) #c.request('localhost', version=3)
+response = c.request('192.168.1.65', version=3) #c.request('localhost', version=3) 192.168.1.65
 
 
 
