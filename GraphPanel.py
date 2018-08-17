@@ -18,20 +18,28 @@ import time
 
 # The recommended way to use wx with mpl is with the WXAgg
 # backend. 
-#
 import matplotlib
 matplotlib.use('WXAgg')
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_wxagg import \
     FigureCanvasWxAgg as FigCanvas, \
     NavigationToolbar2WxAgg as NavigationToolbar
+
 import numpy as np
 import pylab
 
-class GraphPanel:
+class GraphPanel(wx.Frame):
     
-    def __init__(self, mainFrame, panel):
-        self.panel = panel
+    def __init__(self, mainFrame):
+        
+        super(GraphPanel, self).__init__(None)
+        
+        self.SetSize((800,650))
+        
+        self.panel = wx.Panel(self, size=(800,800))
+        
+        self.SetTitle("Forces & moments")
+        
         self.mainFrame = mainFrame
         self.dataFX = [0.0]
         self.dataFY = [0.0]
@@ -44,8 +52,8 @@ class GraphPanel:
         
         self.biasFlag = False
         
-        self.redraw_timer = wx.Timer(self.mainFrame)
-        self.mainFrame.Bind(wx.EVT_TIMER, self.on_redraw_timer, self.redraw_timer)
+        self.redraw_timer = wx.Timer(self)
+        self.Bind(wx.EVT_TIMER, self.on_redraw_timer, self.redraw_timer)
         refreshRate = 30.0 # 30 Hz
         self.redraw_timer.Start(1.0/refreshRate * 1000)
         
@@ -65,20 +73,22 @@ class GraphPanel:
         self.ymax_control_moment = BoundControlBox(self.panel, -1, "Y max", 100, pos= (620,410))
         
         self.pause_button = wx.Button(self.panel, -1, "Pause", pos=(510,570))
-        self.mainFrame.Bind(wx.EVT_BUTTON, self.on_pause_button, self.pause_button)
-        self.mainFrame.Bind(wx.EVT_UPDATE_UI, self.on_update_pause_button, self.pause_button)
+        self.Bind(wx.EVT_BUTTON, self.on_pause_button, self.pause_button)
+        self.Bind(wx.EVT_UPDATE_UI, self.on_update_pause_button, self.pause_button)
         
         self.cb_grid = wx.CheckBox(self.panel, -1, "Show Grid", style=wx.ALIGN_RIGHT, pos=(510,545))
-        self.mainFrame.Bind(wx.EVT_CHECKBOX, self.on_cb_grid, self.cb_grid)
+        self.Bind(wx.EVT_CHECKBOX, self.on_cb_grid, self.cb_grid)
         self.cb_grid.SetValue(True)
         
         self.cb_xlab = wx.CheckBox(self.panel, -1, "Show X labels", style=wx.ALIGN_RIGHT, pos=(510,520))
-        self.mainFrame.Bind(wx.EVT_CHECKBOX, self.on_cb_xlab, self.cb_xlab)        
+        self.Bind(wx.EVT_CHECKBOX, self.on_cb_xlab, self.cb_xlab)        
         self.cb_xlab.SetValue(True)
         
         # Button for handling bias and un-bias.
-        self.biasUnbiasButton = wx.Button(self.panel, -1, "Bias", pos=(610,570))
-        self.mainFrame.Bind(wx.EVT_BUTTON, self.biasUnbiasButtonPressed, self.biasUnbiasButton)
+        #self.biasUnbiasButton = wx.Button(self.panel, -1, "Bias", pos=(610,570))
+        #self.Bind(wx.EVT_BUTTON, self.biasUnbiasButtonPressed, self.biasUnbiasButton)
+        
+        self.Show()
         
     def init_plot(self):
         self.dpi = 100
@@ -87,16 +97,22 @@ class GraphPanel:
         self.axesForces = self.fig.add_subplot(211)
         self.axesForces.set_axis_bgcolor('black')
         #self.axes.set_title('Forces', size=12) ######################### Set title of top axes to transducer name and serial number
-        #ylabelForcesString = self.mainFrame.screenController.panel.FUnitsHeading
-        self.axesForces.set_ylabel('Forces (N)', size=12) ##################### Set axes label to what is received from load cell
+        try:
+            ylabelForcesString = self.mainFrame.screenController.panel.FUnitsHeading
+        except:
+            ylabelForcesString = ' '
+        self.axesForces.set_ylabel(ylabelForcesString, size=12) ##################### Set axes label to what is received from load cell
         
         pylab.setp(self.axesForces.get_xticklabels(), fontsize=10)
         pylab.setp(self.axesForces.get_yticklabels(), fontsize=10)
         
         self.axesMoments = self.fig.add_subplot(212)
         self.axesMoments.set_axis_bgcolor('black')
-        #ylabelMomentsString = self.mainFrame.screenController.panel.TUnitsHeading
-        self.axesMoments.set_ylabel('Moments (Nm)', size=12) ################## Set axes label to what is received from load cell
+        try:
+            ylabelMomentsString = self.mainFrame.screenController.panel.TUnitsHeading
+        except:
+            ylabelMomentsString = ' '
+        self.axesMoments.set_ylabel(ylabelMomentsString, size=12) ################## Set axes label to what is received from load cell
         self.axesMoments.set_xlabel('Time (s)', size=12)
         
         pylab.setp(self.axesMoments.get_xticklabels(), fontsize=10)
@@ -104,13 +120,7 @@ class GraphPanel:
 
         # plot the data as a line series, and save the reference 
         # to the plotted line series
-#        self.plot_data_FX = self.axesForces.plot(self.dataFX, 0, linewidth=1, color=(1, 0, 0))[0]
-#        self.plot_data_FY = self.axesForces.plot(self.dataFY, 0, linewidth=1, color=(0, 1, 0))[0]
-#        self.plot_data_FZ = self.axesForces.plot(self.dataFZ, 0, linewidth=1, color=(0, 0, 1))[0]
-#        
-#        self.plot_data_TX = self.axesMoments.plot(self.dataTX, 0, linewidth=1, color=(1, 0, 0))[0]
-#        self.plot_data_TY = self.axesMoments.plot(self.dataTY, 0, linewidth=1, color=(0, 1, 0))[0]
-#        self.plot_data_TZ = self.axesMoments.plot(self.dataTZ, 0, linewidth=1, color=(0, 0, 1))[0]
+        # Plotting initial value of zero just to initialize
         self.plot_data_FX = self.axesForces.plot([0], 0, linewidth=1, color=(1, 0, 0))[0]
         self.plot_data_FY = self.axesForces.plot([0], 0, linewidth=1, color=(0, 1, 0))[0]
         self.plot_data_FZ = self.axesForces.plot([0], 0, linewidth=1, color=(0, 0, 1))[0]
@@ -367,7 +377,8 @@ class mainFrame(wx.Frame):
         self.panel2 = wx.Panel(self, pos=(0,700), size=(500,200))
         
         self.panel = wx.Panel(self, pos=(0,0), size=(800,600))
-        self.GraphPanel = GraphPanel(self, self.panel)
+        #self.GraphPanel = GraphPanel(self, self.panel)
+        self.GraphPanel = GraphPanel(mainFrame)
         
         self.Show()
         

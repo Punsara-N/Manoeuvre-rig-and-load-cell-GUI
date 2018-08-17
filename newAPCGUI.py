@@ -18,6 +18,7 @@ import logging
 from WirelessFTDemoMainScreenController import WirelessFTDemoMainScreenController
 from ProfileConfigWindow import configFrame
 from DiscoveryWindow import discoveryFrame
+from GraphPanel import GraphPanel
 
 # New Event Declarations
 LogEvent, EVT_LOG = NewEvent()
@@ -135,6 +136,7 @@ class mainWindow(wx.Frame):
         self._bindEvents()
         
         self.flag = 0
+        self.biasFlag = False
         
         self.OnInputType(None)
         
@@ -735,6 +737,13 @@ Unused bits must be set to 0.  '''))
         self.textTransducer6Sizer   = wx.BoxSizer(wx.HORIZONTAL)
         self.textTransducer6Sizer.Add(self.textTransducer6, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
         
+        self.m_transLabels = [self.textTransducer1,
+                              self.textTransducer2,
+                              self.textTransducer3,
+                              self.textTransducer4,
+                              self.textTransducer5,
+                              self.textTransducer6] # Used to update text if transducer becomes saturated.
+        
         self.column5 = wx.BoxSizer(wx.VERTICAL)
         self.column5.Add(self.textBatterySizer,          proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
         self.column5.Add(self.textExternalPowerSizer,    proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
@@ -767,21 +776,21 @@ Unused bits must be set to 0.  '''))
         self.textL = wx.StaticText(self.panel12, label = "L =", style = wx.ALIGN_RIGHT)
         self.textM = wx.StaticText(self.panel12, label = "M =", style = wx.ALIGN_RIGHT)
         self.textN = wx.StaticText(self.panel12, label = "N =", style = wx.ALIGN_RIGHT)
-        self.textXReading = wx.StaticText(self.panel12, label = "0", style = wx.ALIGN_RIGHT)
-        self.textYReading = wx.StaticText(self.panel12, label = "0", style = wx.ALIGN_RIGHT)
-        self.textZReading = wx.StaticText(self.panel12, label = "0", style = wx.ALIGN_RIGHT)
-        self.textLReading = wx.StaticText(self.panel12, label = "0", style = wx.ALIGN_RIGHT)
-        self.textMReading = wx.StaticText(self.panel12, label = "0", style = wx.ALIGN_RIGHT)
-        self.textNReading = wx.StaticText(self.panel12, label = "0", style = wx.ALIGN_RIGHT)
-        self.textXUnit = wx.StaticText(self.panel12, label = "N", style = wx.ALIGN_LEFT)
-        self.textYUnit = wx.StaticText(self.panel12, label = "N", style = wx.ALIGN_LEFT)
-        self.textZUnit = wx.StaticText(self.panel12, label = "N", style = wx.ALIGN_LEFT)
-        self.textLUnit = wx.StaticText(self.panel12, label = "Nm", style = wx.ALIGN_LEFT)
-        self.textMUnit = wx.StaticText(self.panel12, label = "Nm", style = wx.ALIGN_LEFT)
-        self.textNUnit = wx.StaticText(self.panel12, label = "Nm", style = wx.ALIGN_LEFT)
+        self.textXReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
+        self.textYReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
+        self.textZReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
+        self.textLReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
+        self.textMReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
+        self.textNReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
+        self.textXUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
+        self.textYUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
+        self.textZUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
+        self.textLUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
+        self.textMUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
+        self.textNUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
         self.buttonShowLoadsGraph = wx.Button(self.panel12, label="Show graph", size = (100,30))
         self.buttonBias = wx.Button(self.panel12, label="Bias", size = (100,30))
-        self.buttonUnbias = wx.Button(self.panel12, label="Unbias", size = (100,30))
+        #self.buttonUnbias = wx.Button(self.panel12, label="Unbias", size = (100,30))
         
         self.column6 = wx.BoxSizer(wx.VERTICAL)
         self.column6.Add(self.textX, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
@@ -810,7 +819,7 @@ Unused bits must be set to 0.  '''))
         self.row18.Add(self.column8, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
         self.row19 = wx.BoxSizer(wx.HORIZONTAL)
         self.row19.Add(self.buttonBias, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
-        self.row19.Add(self.buttonUnbias, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
+        #self.row19.Add(self.buttonUnbias, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
         self.column9 = wx.BoxSizer(wx.VERTICAL)
         self.column9.Add(self.row18, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
         self.column9.Add(self.buttonShowLoadsGraph, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
@@ -902,6 +911,8 @@ Unused bits must be set to 0.  '''))
         self.Bind(wx.EVT_BUTTON, self.DataTypeGage, self.buttonDataTypeGage)
         self.Bind(wx.EVT_BUTTON, self.SaveFile, self.buttonSaveFile)
         self.Bind(wx.EVT_BUTTON, self.openConfigWindow, self.buttonProfile)
+        self.Bind(wx.EVT_BUTTON, self.biasUnbiasButtonPressed, self.buttonBias)
+        self.Bind(wx.EVT_BUTTON, self.openLoadsGraph, self.buttonShowLoadsGraph)
         
         #self.Bind(wx.EVT_BUTTON, self._test, self.buttonResetRigPosition)
         #self.Bind(wx.EVT_MENU, self._onExit, self.menuItemExit)
@@ -996,9 +1007,12 @@ Unused bits must be set to 0.  '''))
             self.gui2msgcQueue.put_nowait({'ID': 'STOP'})
             self.msg_process.join(0.5)
 
-        if self.graph_process.is_alive():
-            self.graph_process.terminate()
-            self.graph_process.join()
+        try:
+            if self.graph_process.is_alive():
+                self.graph_process.terminate()
+                self.graph_process.join()
+        except Exception as error:
+            print error
             
         
     def OnStart(self, event):
@@ -1374,14 +1388,21 @@ Unused bits must be set to 0.  '''))
         
         self.myLog = myLog.myLog(self)
         
-        
+    
+    '''
+    Load cell funtions
+    '''
     def openDiscoveryWindow(self, event):
         
-        self.discoveryFrame(None, self, size = (800,250), style = wx.MINIMIZE_BOX | wx.SYSTEM_MENU | wx.CAPTION | wx.CLIP_CHILDREN)
+        discoveryFrame(None, self, size = (800,250), style = wx.MINIMIZE_BOX | wx.SYSTEM_MENU | wx.CAPTION | wx.CLIP_CHILDREN)
         
     def openConfigWindow(self, event):
         
-        self.configFrame(None, self, size = (800,800), style = wx.MINIMIZE_BOX | wx.SYSTEM_MENU | wx.CAPTION | wx.CLIP_CHILDREN)
+        configFrame(None, self, size = (800,800), style = wx.MINIMIZE_BOX | wx.SYSTEM_MENU | wx.CAPTION | wx.CLIP_CHILDREN)
+    
+    def openLoadsGraph(self, event):
+        
+        self.loadsGraph = GraphPanel(self)
     
     def buttonConnectDisconnectPressed(self, event):
         
@@ -1419,7 +1440,7 @@ Unused bits must be set to 0.  '''))
             self.PanelUpdateThread(self)
             
             # Plot graphs (panel 3).
-            self.GraphPanel = GraphPanel(self, self.panel3)
+            #self.GraphPanel = GraphPanel(self, self.panel3)
             
             self.screenController.m_LastPacketTime = self.time.time()*1000
             self.screenController.m_packets = 0
@@ -1441,6 +1462,7 @@ Unused bits must be set to 0.  '''))
             self.panel3 = wx.Panel(self, pos=(280,0), size=(770, 600))
         except Exception as e:
             print e
+
     
     def buttonApplyRatePressed(self, event):
         try:
@@ -1499,24 +1521,36 @@ Unused bits must be set to 0.  '''))
             self.textStatsHeadings.Hide()
             self.textStats.Hide()
             
+            
+    def biasUnbiasButtonPressed(self, event):
+        try:
+            if not self.biasFlag:    # If un-baised
+                self.screenController.m_model.biasSensor(0) # 0 means first transducer
+                self.buttonBias.SetLabel('Un-bias')
+                self.biasFlag = True
+            else:
+                self.screenController.m_model.unbiasSensor(0) # 0 means first transducer
+                self.buttonBias.SetLabel('Bias')
+                self.biasFlag = False
+        except Exception as e:
+            print e
+            self.mainFrame.disconnect()
+            
 class PanelUpdateThread:
         
     def __init__(self, main):
         self.main = main
         
-        self.timer = wx.Timer(self.main.panel1)
-        self.main.panel1.Bind(wx.EVT_TIMER, self.PanelUpdate, self.timer)
-        #self.timer.Start(1000/self.main.screenController.UI_UPDATE_HZ) # Updates at 30 Hz
-        self.timer.Start(100)
-        
-        #self.main.panel1.SetDoubleBuffered(False) ######## This should fix flickering
+        #self.timer = wx.Timer(self.main.panel1)
+        self.timer = wx.Timer(self.main)
+        #self.main.panel1.Bind(wx.EVT_TIMER, self.PanelUpdate, self.timer)
+        self.main.Bind(wx.EVT_TIMER, self.PanelUpdate, self.timer)
+        self.timer.Start(1000/self.main.screenController.UI_UPDATE_HZ) # Updates at 30 Hz
+        #self.timer.Start(100)
         
         self.status = True
-        
-        #self.startThread()
     
     def startThread(self):
-        import threading
         self.th = threading.Thread(target=self.PanelUpdate)
         self.th.start()
     
@@ -1543,7 +1577,26 @@ class PanelUpdateThread:
             self.colourTransducer4   = self.main.screenController.colors[status2       & 0x3]
             self.colourTransducer5   = self.main.screenController.colors[status2 >>  2 & 0x3]
             self.colourTransducer6   = self.main.screenController.colors[status2 >>  4 & 0x3]
-            self.main.panel1.Refresh()
+            #self.main.panel1.Refresh()
+            
+            self.panelLED1.colour = self.colourLEDBattery
+            self.panelLED1.Refresh()
+            self.panelLED2.colour = self.colourExternalPower
+            self.panelLED2.Refresh()
+            self.panelLED3.colour = self.colourWLAN
+            self.panelLED3.Refresh()
+            self.panelLED4.colour = self.colourTransducer1
+            self.panelLED4.Refresh()
+            self.panelLED5.colour = self.colourTransducer2
+            self.panelLED5.Refresh()
+            self.panelLED6.colour = self.colourTransducer3
+            self.panelLED6.Refresh()
+            self.panelLED7.colour = self.colourTransducer4
+            self.panelLED7.Refresh()
+            self.panelLED8.colour = self.colourTransducer5
+            self.panelLED8.Refresh()
+            self.panelLED9.colour = self.colourTransducer6
+            self.panelLED9.Refresh()
             
             
             # Update saturation flags.
@@ -1588,17 +1641,29 @@ class PanelUpdateThread:
             self.main.screenController.panel.setSensorData(self.main.screenController.m_lastSample)
             stringForces,stringMoments = self.main.screenController.panel.updatePlot()
             
-            self.main.textForcesHeading.SetLabel(self.main.screenController.panel.FUnitsHeading)
-            self.main.textMomentsHeading.SetLabel(self.main.screenController.panel.TUnitsHeading)
+            X = float(stringForces.split('\n\n')[0].strip())
+            Y = float(stringForces.split('\n\n')[1].strip())
+            Z = float(stringForces.split('\n\n')[2].strip())
+            L = float(stringMoments.split('\n\n')[0].strip())
+            M = float(stringMoments.split('\n\n')[1].strip())
+            N = float(stringMoments.split('\n\n')[2].strip())
+            forceUnits = self.main.screenController.panel.FUnitsHeading
+            momentUnits = self.main.screenController.panel.TUnitsHeading
             
-            self.main.textForcesValues.SetLabel(stringForces)
-            self.main.textMomentsValues.SetLabel(stringMoments)
-            
-            self.main.textAxesX.Show()
-            self.main.textAxesY.Show()
-            self.main.textAxesZ.Show()
+            self.main.textXReading.SetLabel(str(X))
+            self.main.textYReading.SetLabel(str(Y))
+            self.main.textZReading.SetLabel(str(Z))
+            self.main.textLReading.SetLabel(str(L))
+            self.main.textMReading.SetLabel(str(M))
+            self.main.textNReading.SetLabel(str(N))
+            self.main.textXUnit.SetLabel(forceUnits)
+            self.main.textYUnit.SetLabel(forceUnits)
+            self.main.textZUnit.SetLabel(forceUnits)
+            self.main.textLUnit.SetLabel(momentUnits)
+            self.main.textMUnit.SetLabel(momentUnits)
+            self.main.textNUnit.SetLabel(momentUnits)
                     
-            self.main.Refresh()    
+            #self.main.Refresh()    
                 
         else:
             self.timer.Stop()
@@ -1608,23 +1673,37 @@ class PanelUpdateThread:
         
     def panelReset(self):
         # Setting displays to default
-#            self.main.LEDTransducer1  .LEDColour('BLACK')
-#            self.main.LEDTransducer2  .LEDColour('BLACK')
-#            self.main.LEDTransducer3  .LEDColour('BLACK')
-#            self.main.LEDWLAN         .LEDColour('BLACK')
-#            self.main.LEDExternalPower.LEDColour('BLACK')
-#            self.main.LEDBattery      .LEDColour('BLACK')
-#            self.main.LEDTransducer4  .LEDColour('BLACK')
-#            self.main.LEDTransducer5  .LEDColour('BLACK')
-#            self.main.LEDTransducer6  .LEDColour('BLACK')
-        self.main.textStats.SetLabel(' ')
-        self.main.textForcesHeading.SetLabel(' ')
-        self.main.textMomentsHeading.SetLabel(' ')
-        self.main.textForcesValues.SetLabel(' ')
-        self.main.textMomentsValues.SetLabel(' ')
-        self.main.textAxesX.Hide()
-        self.main.textAxesY.Hide()
-        self.main.textAxesZ.Hide()
+        self.panelLED1.colour = 'BLACK'
+        self.panelLED1.Refresh()
+        self.panelLED2.colour = 'BLACK'
+        self.panelLED2.Refresh()
+        self.panelLED3.colour = 'BLACK'
+        self.panelLED3.Refresh()
+        self.panelLED4.colour = 'BLACK'
+        self.panelLED4.Refresh()
+        self.panelLED5.colour = 'BLACK'
+        self.panelLED5.Refresh()
+        self.panelLED6.colour = 'BLACK'
+        self.panelLED6.Refresh()
+        self.panelLED7.colour = 'BLACK'
+        self.panelLED7.Refresh()
+        self.panelLED8.colour = 'BLACK'
+        self.panelLED8.Refresh()
+        self.panelLED9.colour = 'BLACK'
+        self.panelLED9.Refresh()
+        self.main.textStats.SetLabel(" ")
+        self.main.textXReading.SetLabel(" ")
+        self.main.textYReading.SetLabel(" ")
+        self.main.textZReading.SetLabel(" ")
+        self.main.textLReading.SetLabel(" ")
+        self.main.textMReading.SetLabel(" ")
+        self.main.textNReading.SetLabel(" ")
+        self.main.textXUnit.SetLabel(" ")
+        self.main.textYUnit.SetLabel(" ")
+        self.main.textZUnit.SetLabel(" ")
+        self.main.textLUnit.SetLabel(" ")
+        self.main.textMUnit.SetLabel(" ")
+        self.main.textNUnit.SetLabel(" ")
         
         
     def _test(self, event):

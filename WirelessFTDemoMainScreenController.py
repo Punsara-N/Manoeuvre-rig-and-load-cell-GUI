@@ -568,11 +568,11 @@ class WirelessFTDemoMainScreenController:
     
         # Iterate through rows of A.
         for i in range(len(A)):
-           # Iterate through columns of B
-           for j in range(len(B[0])):
-               # Iterate through rows of B
-               for k in range(len(B)):
-                   results[i][j] += A[i][k] * B[k][j]
+            # Iterate through columns of B
+            for j in range(len(B[0])):
+                # Iterate through rows of B
+                for k in range(len(B)):
+                    results[i][j] += A[i][k] * B[k][j]
                   
         return results
         

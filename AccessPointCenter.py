@@ -26,7 +26,7 @@ import wx
 from multiprocessing import Process, Queue, freeze_support
 from newAPCGUI import mainWindow as MyFrame #from AccessPointFrame import MyFrame
 from MessageCenter import worker
-from DynamicGraph import drawer
+#from DynamicGraph import drawer
 
 class MyApp(wx.App):
     """
@@ -80,9 +80,10 @@ if __name__ == '__main__':
     msg_process.daemon = True
     msg_process.start()
 
-    graph_process = Process(target=drawer, args=(gui2drawerQueue,))
-    graph_process.daemon = True
-    graph_process.start()
+    #graph_process = Process(target=drawer, args=(gui2drawerQueue,))
+    #graph_process.daemon = True
+    #graph_process.start()
+    graph_process = None
 
     # Create the app
     app = MyApp(redirect=True,
