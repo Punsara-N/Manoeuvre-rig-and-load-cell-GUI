@@ -34,7 +34,7 @@ class GraphPanel(wx.Frame):
         
         super(GraphPanel, self).__init__(None)
         
-        self.SetSize((800,650))
+        self.SetSize((1200,650))
         
         self.panel = wx.Panel(self, size=(800,800))
         
@@ -62,15 +62,15 @@ class GraphPanel(wx.Frame):
         self.init_plot()
         self.canvas = FigCanvas(self.panel, -1, self.fig)
         
-        self.xmin_control_force = BoundControlBox(self.panel, -1, "X min", 0, pos= (500,0))
-        self.xmax_control_force = BoundControlBox(self.panel, -1, "X max", 50, pos= (620,0))
-        self.ymin_control_force = BoundControlBox(self.panel, -1, "Y min", 0, pos= (500,110))
-        self.ymax_control_force = BoundControlBox(self.panel, -1, "Y max", 100, pos= (620,110))
+        self.xmin_control_force = BoundControlBox(self.panel, -1, "X min", 0, pos= (500+400,0))
+        self.xmax_control_force = BoundControlBox(self.panel, -1, "X max", 50, pos= (620+400,0))
+        self.ymin_control_force = BoundControlBox(self.panel, -1, "Y min", 0, pos= (500+400,110))
+        self.ymax_control_force = BoundControlBox(self.panel, -1, "Y max", 100, pos= (620+400,110))
         
-        self.xmin_control_moment = BoundControlBox(self.panel, -1, "X min", 0, pos= (500,300))
-        self.xmax_control_moment = BoundControlBox(self.panel, -1, "X max", 50, pos= (620,300))
-        self.ymin_control_moment = BoundControlBox(self.panel, -1, "Y min", 0, pos= (500,410))
-        self.ymax_control_moment = BoundControlBox(self.panel, -1, "Y max", 100, pos= (620,410))
+        self.xmin_control_moment = BoundControlBox(self.panel, -1, "X min", 0, pos= (500+400,300))
+        self.xmax_control_moment = BoundControlBox(self.panel, -1, "X max", 50, pos= (620+400,300))
+        self.ymin_control_moment = BoundControlBox(self.panel, -1, "Y min", 0, pos= (500+400,410))
+        self.ymax_control_moment = BoundControlBox(self.panel, -1, "Y max", 100, pos= (620+400,410))
         
         self.pause_button = wx.Button(self.panel, -1, "Pause", pos=(510,570))
         self.Bind(wx.EVT_BUTTON, self.on_pause_button, self.pause_button)
@@ -92,7 +92,7 @@ class GraphPanel(wx.Frame):
         
     def init_plot(self):
         self.dpi = 100
-        self.fig = Figure((5.0, 6.0), dpi=self.dpi)
+        self.fig = Figure((9.0, 6.0), dpi=self.dpi)
 
         self.axesForces = self.fig.add_subplot(211)
         self.axesForces.set_axis_bgcolor('black')
@@ -139,19 +139,19 @@ class GraphPanel(wx.Frame):
             #self.mainFrame.data.append(self.mainFrame.datagen.next())
             
             try:
-#                stringForces,stringMoments = self.mainFrame.screenController.panel.updatePlot()
-#                FX = float(stringForces.split('\n\n')[0].strip())
-#                FY = float(stringForces.split('\n\n')[1].strip())
-#                FZ = float(stringForces.split('\n\n')[2].strip())
-#                TX = float(stringMoments.split('\n\n')[0].strip())
-#                TY = float(stringMoments.split('\n\n')[1].strip())
-#                TZ = float(stringMoments.split('\n\n')[2].strip())
-                FX = 0.00
-                FY = 0.50
-                FZ = 0.75
-                TX = 0.00
-                TY = 0.50
-                TZ = 0.75
+                stringForces,stringMoments = self.mainFrame.screenController.panel.updatePlot()
+                FX = float(stringForces.split('\n\n')[0].strip())
+                FY = float(stringForces.split('\n\n')[1].strip())
+                FZ = float(stringForces.split('\n\n')[2].strip())
+                TX = float(stringMoments.split('\n\n')[0].strip())
+                TY = float(stringMoments.split('\n\n')[1].strip())
+                TZ = float(stringMoments.split('\n\n')[2].strip())
+                #FX = 0.00
+                #FY = 0.50
+                #FZ = 0.75
+                #TX = 0.00
+                #TY = 0.50
+                #TZ = 0.75
                 self.dataFX.append(FX)
                 self.dataFY.append(FY)
                 self.dataFZ.append(FZ)
@@ -216,23 +216,36 @@ class GraphPanel(wx.Frame):
         # minimal/maximal value in the current display, and not
         # the whole data set.
         # 
+        windowSize = 400
         if self.ymin_control_force.is_auto():
-            ymin_force = round(min([min(self.dataFX), min(self.dataFY), min(self.dataFZ)]), 0)
+            if len(self.dataFX) < windowSize:
+                ymin_force = round(min([min(self.dataFX), min(self.dataFY), min(self.dataFZ)]),1)
+            else:
+                ymin_force = round(min([min(self.dataFX[len(self.dataFX)-windowSize:]), min(self.dataFY[len(self.dataFY)-windowSize:]), min(self.dataFZ[len(self.dataFZ)-windowSize:])]),1)
         else:
             ymin_force = float(self.ymin_control_force.manual_value())
         
         if self.ymax_control_force.is_auto():
-            ymax_force = round(max([max(self.dataFX), max(self.dataFY), max(self.dataFZ)]), 0)
+            if len(self.dataFX) < windowSize:
+                ymax_force = round(max([max(self.dataFX), max(self.dataFY), max(self.dataFZ)]),1)
+            else:
+                ymax_force = round(max([max(self.dataFX[len(self.dataFX)-windowSize:]), max(self.dataFY[len(self.dataFY)-windowSize:]), max(self.dataFZ[len(self.dataFZ)-windowSize:])]),1)
         else:
             ymax_force = float(self.ymax_control_force.manual_value())
         
         if self.ymin_control_moment.is_auto():
-            ymin_moment = round(min([min(self.dataTX), min(self.dataTY), min(self.dataTZ)]), 0)
+            if len(self.dataTX) < windowSize:
+                ymin_moment = round(min([min(self.dataTX), min(self.dataTY), min(self.dataTZ)]), 1)
+            else:
+                ymin_moment = round(min([min(self.dataTX[len(self.dataTX)-windowSize:]), min(self.dataTY[len(self.dataTY)-windowSize:]), min(self.dataTZ[len(self.dataTZ)-windowSize:])]), 3)
         else:
             ymin_moment = float(self.ymin_control_moment.manual_value())
         
         if self.ymax_control_moment.is_auto():
-            ymax_moment = round(max([max(self.dataTX), max(self.dataTY), max(self.dataTZ)]), 0)
+            if len(self.dataTX) < windowSize:
+                ymax_moment = round(max([max(self.dataTX), max(self.dataTY), max(self.dataTZ)]), 1)
+            else:
+                ymax_moment = round(max([max(self.dataTX[len(self.dataTX)-windowSize:]), max(self.dataTY[len(self.dataTY)-windowSize:]), max(self.dataTZ[len(self.dataTZ)-windowSize:])]), 3)
         else:
             ymax_moment = float(self.ymax_control_moment.manual_value())
 

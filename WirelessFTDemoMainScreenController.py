@@ -12,7 +12,7 @@ Date: 01-08-2017
 -------------------------------------------------------------------------------------------------
 '''
 
-class WirelessFTDemoMainScreenController:
+class WirelessFTDemoMainScreenController(object):
     
     import DiscoveryClient
     import WirelessFTDemoModel
@@ -211,7 +211,7 @@ class WirelessFTDemoMainScreenController:
         
         try:
             if len(self.devices) > 0:
-                print '\nTotal number of devices found: %i' % len(self.devices)
+                print 'Total number of devices found: %i' % len(self.devices)
                 for i in range(0, len(self.devices)):
                     print self.devices[i].m_ipa, self.devices[i].m_ipaNetmask, self.devices[i].m_macstring, self.devices[i].m_strApplication, self.devices[i].m_strLocation
         except Exception as e:
@@ -220,9 +220,15 @@ class WirelessFTDemoMainScreenController:
     def m_ApplyRateChanged(self):
         self.m_btnApplyRatePressed()
         
-    def m_btnApplyRatePressed(self, rate):
+    def m_btnApplyRatePressed(self, rate, oversample):
         try:
             packetRate = int(rate) # Get rate from screen
+            oversampleRate = int(oversample)
+            mult = packetRate * oversampleRate
+            print "Packet rate x oversample = " + str(packetRate) + " x " + str(oversampleRate) + " = " + str(mult)
+            if mult > 4000:
+                print 'Packet rate x oversample must be less that 4000!'
+                return packetRate
         except Exception as e:
             print e
             packetRate = self.MIN_UDP_RATE
@@ -238,7 +244,7 @@ class WirelessFTDemoMainScreenController:
         self.m_profile.setRate  (     packetRate) # Copy rate to profile
         
         try:
-            self.m_model.applyRate(packetRate) # Copy rate to WNet unit
+            self.m_model.applyRate(packetRate, oversampleRate) # Copy rate to WNet unit
         except Exception as e: # If the WNet is not connected,
             print e
             pass # do not do anything rash.
@@ -260,7 +266,7 @@ class WirelessFTDemoMainScreenController:
     ''' Connects to the WNet. '''
     def connectButtonPressed(self, ip, profile_name = 'DefaultProfile.xml'):
         
-        print '\nConnecting...\n'
+        print 'Connecting...'
         
         self.profile_name = profile_name
         self.m_profile = self.WirelessFTDemoProfile.WirelessFTDemoProfile()
@@ -270,34 +276,35 @@ class WirelessFTDemoMainScreenController:
         self.m_bufferedWriter = None
         
         # PROFILE SETTINGS
-        print '\nProfile settings:'
-        print '-----------------\n'
-        print 'Active Calibration:', self.m_profile.getActiveCalibration(0)
-        print 'Calibration:', self.m_profile.getCalibrationCommand(0)
-        print 'Displacement Units:', self.m_profile.getDisplacementUnits(0)
-        print 'Displacement Values:', self.m_profile.getDisplacementValues(0)
-        print 'Filter:', self.m_profile.getFilterCommand(0)
-        print 'Filter Type:', self.m_profile.getFilterType(0)
-        print 'Filter Value:', self.m_profile.getFilterValue(0)
-        print 'Force Units:', self.m_profile.getForceUnits()
-        print 'Rate:', self.m_profile.getRateCommand()
-        print 'Rotation Units:', self.m_profile.getRotationUnits(0)
-        print 'Rotation Values:', self.m_profile.getRotationValues(0)
-        print 'SD:', self.m_profile.getSDCommand()
-        print 'Torque Units:', self.m_profile.getTorqueUnits()
-        print 'Transducer:', self.m_profile.getTransducerCommand(0)
-        print 'Transformation Matrix:', self.m_profile.getTransformationMatrix(0)
-        print  'XPWR:', self.m_profile.getXPWRCommand(0)
+        print 'Loading profile: ' + str(self.profile_name)
+        print 'Profile settings:'
+        print '-----------------'
+        print 'Active Calibration: ' + str(self.m_profile.getActiveCalibration(0))
+        print 'Calibration: ' + str(self.m_profile.getCalibrationCommand(0))
+        print 'Displacement Units: ' + str(self.m_profile.getDisplacementUnits(0))
+        print 'Displacement Values: ' + str(self.m_profile.getDisplacementValues(0))
+        print 'Filter: ' + str(self.m_profile.getFilterCommand(0))
+        print 'Filter Type: ' + str(self.m_profile.getFilterType(0))
+        print 'Filter Value: ' + str(self.m_profile.getFilterValue(0))
+        print 'Force Units: ' + str(self.m_profile.getForceUnits())
+        print 'Rate: ' + str(self.m_profile.getRateCommand())
+        print 'Rotation Units: ' + str(self.m_profile.getRotationUnits(0))
+        print 'Rotation Values: ' + str(self.m_profile.getRotationValues(0))
+        print 'SD: ' + str(self.m_profile.getSDCommand())
+        print 'Torque Units: ' + str(self.m_profile.getTorqueUnits())
+        print 'Transducer: ' + str(self.m_profile.getTransducerCommand(0))
+        print 'Transformation Matrix: ' + str(self.m_profile.getTransformationMatrix(0))
+        print  'XPWR: ' + str(self.m_profile.getXPWRCommand(0))
         
         if not self.m_connected: # and len(self.devices)>0:
             try:
                 
                 self.m_model.connect(ip, self.m_profile, self.m_saveProfile, self.m_controller)
 
-                print '\nConnected.\n'                
+                print 'Connected.'                
                 
                 self.m_readingRecords = True
-                self.CollectData(self)
+                self.CollectData(self, self.mainWindow)
                 
                 self.setupPanels() ############## Setup panels.
                 self.refreshCalibrationInformation()
@@ -329,7 +336,7 @@ class WirelessFTDemoMainScreenController:
         for m_xpwr in self.m_profile.m_xpwr:
             if m_xpwr == 'ON':
                 sensors += 1
-        print 'Number of sensors:', sensors
+        print 'Number of sensors: ' + str(sensors)
         
         ########### Create graphs for each Transducer and add them to the screen.
         self.panel = self.CreatePanel()
@@ -344,7 +351,7 @@ class WirelessFTDemoMainScreenController:
     ''' Close the UDP stream and TCP connection to the current device, then clears the graphs from the GUI. '''    
     def disconnectButtonPressed(self):
         
-        print '\nDisconnecting...\n'
+        print 'Disconnecting...'
         
         self.m_readingRecords = False
         
@@ -365,7 +372,7 @@ class WirelessFTDemoMainScreenController:
             
         self.m_connected = False
         
-        print '\nDisconnected.\n'
+        print 'Disconnected.'
         
     ''' Called when user presses button to choose a data collection file. '''
     def chooseDataCollectionFilePressed(self):
@@ -400,7 +407,7 @@ class WirelessFTDemoMainScreenController:
                 
                 filename = filename + '_' + currentYear + '_' + currentMonth + '_' + currentDay + '_' + currentHour + '_' + currentMinute + '_' + currentSecond + '_' + currentMilliSecond + extension
                                 
-                print 'Saving data to file:', filename
+                print 'Saving data to file:' + str(filename)
                 
                 self.startCollectingData(filename)
                 
@@ -454,8 +461,9 @@ class WirelessFTDemoMainScreenController:
         warningShown = False # Did we fail to retrieve the last sample buffer?
         reconnecting = False # Are we trying to re-establish communication?
         
-        def __init__(self, main):
+        def __init__(self, main, mainWindow):
             self.main = main
+            self.mainWindow = mainWindow
             self.CollectDataThread()
             
         # Continuously reads samples from the WNet and (optionally) writes them to a .txt or .csv file.
@@ -508,7 +516,8 @@ class WirelessFTDemoMainScreenController:
                     currentTime = self.time.time()
                     if ((currentTime - lastSuccess) > self.THRESHOLD):
                         try:
-                            self.main.disconnectButtonPressed() # This function really should be called from the FX application thread
+                            #self.main.disconnectButtonPressed() # This function really should be called from the FX application thread
+                            self.mainWindow.disconnect()
                         except Exception as e:
                             print e
                     else:
@@ -616,9 +625,10 @@ class WirelessFTDemoMainScreenController:
         if self.m_connected:
             self.disconnectButtonPressed()
     
-    def __init__(self):
+    def __init__(self, mainWindow):
         self.MIN_UDP_RATE =    5
         self.MAX_UDP_RATE = 4000
+        self.mainWindow = mainWindow
     
     
     

@@ -94,7 +94,7 @@ class Worker(object):
                     self.log.info('MainLoop Max DT={}us'.format(dt))
             self.processGUImsg(False, 0)
         self.log.info('Work end.')
-        if self.fileALL:
+        if self.fileALL: # Closes save file if it is open
             self.fileALL.close()
             self.log.info('Stop Recording to {}.'.format(self.filename))
             self.fileALL = None

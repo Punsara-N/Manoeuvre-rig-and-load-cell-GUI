@@ -37,6 +37,8 @@ class WirelessFTSample:
         self.m_batteryLevel     = 0x00
         self.m_sensorMask       = 0x00
         
+        self.m_timeStampms      = 0
+        
         self.m_numSensors = 1 # Assuming 1 active transducer to begin with
         
     
@@ -121,37 +123,58 @@ class WirelessFTSample:
                 for channel in range (0, self.WirelessFTDemoModel.WirelessFTDemoModel.NUM_AXES): # For each channel,
                     self.m_ftOrGageData[transducer][channel] = packet[channel] # get the data. (I am taking the first four bytes and converting it into an integer)
     
-        # wnetTime, sysTime, and years70 are all type long
-        years70 = long((70 * 365 + 17) * 24 * 60 * 60) # 70 years (in seconds)
-        #years70 = struct.unpack('l', struct.pack('L', years70))[0] # Making the value signed so it behaves the same as in java.
-        wnetTime = long(self.m_timeStamp) # Wnet's number of seconds since 1/1/1900 00:00 NTP (format 20.12) (unsigned long)
-        #print 'Current wnetTime:', wnetTime
-        #wnetTime = struct.unpack('l', struct.pack('L', wnetTime))[0] # Making the value signed so it behaves the same as in java.
-        sysTime   = long(time.time()*1000) # JAVA: System.currentTimeMillis() # System's number of milliseconds since 1/1/1970 00:00 UTC (format 64.0)
-        #sysTime = struct.unpack('l', struct.pack('L', sysTime))[0] # Making the value signed so it behaves the same as in java.        
-        sysTime   = sysTime + (years70 * 1000) # Convert to number of milliseconds since 1/1/1900 00:00 (add 70 years)
-        sysTime   = (sysTime << 12)   / 1000 # Convert to number of seconds since 1/1/1900 00:00 NTP (format 20.12)
-        diff = int(sysTime - wnetTime)
-        #diff = struct.unpack('b', struct.pack('l', diff))[0] # Making the value to a signed integer. 
-        self.m_latency = diff & 0xffffffff # Calculate modulo 32-bits latency (20.12)
-        self.m_latency = (self.m_latency * 1000) >> 12 # Convert to mS (32.0)
-        #print self.m_latency
+        '''
+        # wnetTime, sysTime, and years70 are all type long in Java source code
+        years70 = (((70 * 365) + 17) * 24 * 60 * 60) & 0xFFFFFFFF # 70 years (in seconds)
+        wnetTime = self.m_timeStamp & 0xFFFFFFFF # Wnet's number of seconds since 1/1/1900 00:00 NTP (format 20.12) (unsigned long)
+        sysTime   = (time.time()*1000) & 0xFFFFFFFF # JAVA: System.currentTimeMillis() # System's number of milliseconds since 1/1/1970 00:00 UTC (format 64.0)
+        sysTime   = (sysTime + (years70 * 1000)) & 0xFFFFFFFF # Convert to number of milliseconds since 1/1/1900 00:00 (add 70 years)
+        sysTime   = (((sysTime << 12) & 0xFFFFFFFF) / 1000)  & 0xFFFFFFFF # Convert to number of seconds since 1/1/1900 00:00 NTP (format 20.12)
+        self.m_latency = (sysTime - wnetTime) & 0xFFFFFFFF # Calculate modulo 32-bits latency (20.12)
+        if self.m_latency > 0x7FFFFFFF:
+            self.m_latency -= 0xFFFFFFFF
+        self.m_latency = (self.m_latency * 1000) & 0xFFFFFFFF
+        if self.m_latency > 0x7FFFFFFF:
+            self.m_latency -= 0xFFFFFFFF
+        self.m_latency = (self.m_latency >> 12) & 0xFFFFFFFF # Convert to mS (32.0)
+        if self.m_latency > 0x7FFFFFFF:
+            self.m_latency -= 0xFFFFFFFF
+            
+        self.m_timeStampms = self.m_timeStamp & 0xFFFFFFFF
+        self.m_timeStampms = (self.m_timeStamp * 1000) & 0xFFFFFFFF
+        self.m_timeStampms = (self.m_timeStamp >> 12) & 0xFFFFFFFF
+        print (sysTime * 1000) & 0xFFFFFFFF - self.m_timeStampms
+        '''
         
-#        years70 = long((70 * 365 + 17) * 24 * 60 * 60) # 70 years (in seconds)
-#        #years70 = struct.unpack('l', struct.pack('L', years70))[0] # Making the value signed so it behaves the same as in java.
-#        wnetTime = self.m_timeStamp # Wnet's number of seconds since 1/1/1900 00:00 NTP (format 20.12) (unsigned long)
-#        wnetTime_binString = bin(wnetTime)[2:][:20] + '.' + bin(wnetTime)[2:][20:]
-#        wnetTime_dec = self.parse_bin(wnetTime_binString)
-#        print 'Wnet time:', wnetTime_dec
-#        #sysTime   = long(time.time()*1000) # JAVA: System.currentTimeMillis() # System's number of milliseconds since 1/1/1970 00:00 UTC (format 64.0)
-#        #sysTime = struct.unpack('l', struct.pack('L', sysTime))[0] # Making the value signed so it behaves the same as in java.        
-#        #sysTime   = sysTime + (years70 * 1000) # Convert to number of milliseconds since 1/1/1900 00:00 (add 70 years)
-#        #sysTime   = (sysTime << 12)   / 1000 # Convert to number of seconds since 1/1/1900 00:00 NTP (format 20.12)
-#        #diff = int(sysTime - wnetTime)
-#        #diff = struct.unpack('b', struct.pack('l', diff))[0] # Making the value to a signed integer. 
-#        #self.m_latency = diff & 0xffffffff # Calculate modulo 32-bits latency (20.12)
-#        self.m_latency = 0#(self.m_latency * 1000) >> 12 # Convert to mS (32.0)
-#        #print self.m_latency
+        # Convert timestamp to unsigned 32bit
+        m_timeStamp = self.m_timeStamp#2078044892
+        wnetTime  = float(m_timeStamp)
+        if wnetTime >= 0:
+            pass
+        else:
+            wnetTime += 2**32
+        
+        # Find when last rollover started, the loadcell clock rests ever 2^20 seconds, clock started at midnight January 1, 1900 (70 years before Epoch (midnight January 1, 1970))
+        years70 = ((70 * 365) + 17) * 24 * 60 * 60 # 70 years (in seconds)
+        secondsSinceStartOfTodayToNow = time.time() % (24*60*60)
+        secondsSinceStartOfWNetClockToStartOfDay = time.time() - secondsSinceStartOfTodayToNow + years70
+        A = secondsSinceStartOfWNetClockToStartOfDay % 2**20 # seconds from start of last rollover before midnight to midnight
+        B = wnetTime/(2**12) # Received timestamp, in seconds
+        
+        # Check if clock rolled over after midnight that day (before the packet was received), and correct date/time of start of last rollover accordingly
+        # Note startOfRollOver is relative to epoch, in seconds
+        if A > B:
+            startOfRollover = secondsSinceStartOfWNetClockToStartOfDay - years70 - A + 2**20 # Rollover happened after midnight before packet was received
+        else:
+            startOfRollover = secondsSinceStartOfWNetClockToStartOfDay - years70 - A
+        
+        # So packet date/time = timestamp on packet + date/time of start of last rollover
+        packetTime = startOfRollover + wnetTime/(2**12) # packet time since Epoch, in seconds
+        print 'Wnet time: ' + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(packetTime))   
+        
+        self.m_latency = time.time()*1000 - packetTime*1000 # in milliseconds
+        print 'Clock offset: ' + str(self.m_latency)
+        
         
     def parse_bin(self, s):
         t = s.split('.')

@@ -81,8 +81,8 @@ class WirelessFTDemoModel:
     @param rate How many ADC reads are between each sent packet.
     @throws CommSeveredException if the command cannot be sent for any reason.
     '''
-    def applyRate(self,rate): 
-        self.m_sensor.sendTelnetCommand("RATE " + str(rate) + " 1", True)
+    def applyRate(self,rate,oversample=1): 
+        self.m_sensor.sendTelnetCommand("RATE " + str(rate) + " " + str(oversample), True)
     
     '''    
     Gets whether or not F/T records will also be written to the MicroSD card.
@@ -570,9 +570,9 @@ class WirelessFTDemoModel:
     '''
     def sendCommandAndWaitForResponse(self, command):
         response = ''
-        print '\nTelnet command being sent:', command
+        print 'Telnet command being sent: ' + str(command)
         self.m_sensor.sendTelnetCommand(command, True) # send command, clearing the input buffer first.
         while not response.endswith('\r\n>'):
             response = response + self.m_sensor.readTelnetData(True) # Blocks if no available data
-        print 'Telnet message received:', response
+        print 'Telnet message received:' + str(response)
         return response

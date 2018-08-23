@@ -126,7 +126,7 @@ class mainWindow(wx.Frame):
         self.gui2msgcQueue = gui2msgcQueue
         self.msgc2guiQueue = msgc2guiQueue
         self.gui2drawerQueue = gui2drawerQueue
-        self.screenController = WirelessFTDemoMainScreenController()
+        self.screenController = WirelessFTDemoMainScreenController(self)
         
         self.parser = SafeConfigParser()
         self.parser.read('config.ini')
@@ -325,7 +325,7 @@ Unused bits must be set to 0.  '''))
         
         self.buttonSendServoCommand = wx.Button(self.panel4, label="Servo Command", size = (100,30))
         self.buttonSendServoCommand.Enable(False)
-        self.comboBoxInputType = wx.ComboBox(self.panel4, size = (70,23), choices = ['Reset','Step','Doublet','3-2-1-1','Ramp', 'pitch rate','open loop','LinFreq Sweep','ExpFreq Sweep'])
+        self.comboBoxInputType = wx.Choice(self.panel4, size = (110,23), choices = ['Reset','Step','Doublet','3-2-1-1','Ramp', 'pitch rate','open loop','LinFreq Sweep','ExpFreq Sweep'])
         self.comboBoxInputType.SetSelection(0)
         self.textStartTime = wx.StaticText(self.panel4, label = "Start time:", style = wx.ALIGN_RIGHT)
         self.controlTextStartTime = wx.TextCtrl(self.panel4, size = (50,23), value = "500", validator = MyValidator(DIGIT_ONLY))
@@ -439,28 +439,28 @@ Unused bits must be set to 0.  '''))
         self.MaxValue1 = self.controlTextMaxValue1
         self.MinValue1 = self.controlTextMinFreq
         self.Sign1     = self.controlTextSign1
-        self.ServoRef2 = self.checkBoxCH2
-        self.Srv2Move2 = self.controlTextDe
+        self.Srv2Move2 = self.checkBoxCH2
+        self.ServoRef2 = self.controlTextDe
         self.MaxValue2 = self.controlTextMaxValue2
         self.MinValue2 = self.controlTextMaxFreq
         self.Sign2     = self.controlTextSign2
-        self.ServoRef3 = self.checkBoxCH3
-        self.Srv2Move3 = self.controlTextDr
+        self.Srv2Move3 = self.checkBoxCH3
+        self.ServoRef3 = self.controlTextDr
         self.MaxValue3 = self.controlTextMaxValue3
         self.MinValue3 = self.controlTextMinValue1
         self.Sign3     = self.controlTextSign3
-        self.ServoRef4 = self.checkBoxCH4
-        self.Srv2Move4 = self.controlTextCa
+        self.Srv2Move4 = self.checkBoxCH4
+        self.ServoRef4 = self.controlTextCa
         self.MaxValue4 = self.controlTextMaxValue4
         self.MinValue4 = self.controlTextMinValue2
         self.Sign4     = self.controlTextSign4
-        self.ServoRef5 = self.checkBoxCH5
-        self.Srv2Move5 = self.controlTextCe
+        self.Srv2Move5 = self.checkBoxCH5
+        self.ServoRef5 = self.controlTextCe
         self.MaxValue5 = self.controlTextMaxValue5
         self.MinValue5 = self.controlTextMinValue3
         self.Sign5     = self.controlTextSign5
-        self.ServoRef6 = self.checkBoxCH6
-        self.Srv2Move6 = self.controlTextCr
+        self.Srv2Move6 = self.checkBoxCH6
+        self.ServoRef6 = self.controlTextCr
         self.MaxValue6 = self.controlTextMaxValue6
         self.MinValue6 = self.controlTextMinValue4
         self.Sign6     = self.controlTextSign6
@@ -643,7 +643,9 @@ Unused bits must be set to 0.  '''))
         self.textIPAddress = wx.StaticText(self.panel9, label = "IP Address:", style = wx.ALIGN_LEFT)
         self.controlTextIPAddress = wx.TextCtrl(self.panel9, size = (150,23), value = self.parser.get('main', 'ipa'))
         self.textRate = wx.StaticText(self.panel9, label = "Rate (Hz):", style = wx.ALIGN_LEFT)
+        self.textOversample = wx.StaticText(self.panel9, label = "Oversample rate:", style = wx.ALIGN_LEFT)
         self.controlTextRate = wx.TextCtrl(self.panel9, size = (50,23), value = self.parser.get('main', 'rate'))
+        self.controlTextOversample = wx.TextCtrl(self.panel9, size = (50,23), value = self.parser.get('main', 'oversample'))
         self.buttonApplyRate = wx.Button(self.panel9, label="Apply rate", size = (100,30))
         self.textDataType = wx.StaticText(self.panel9, label = "Data type:", style = wx.ALIGN_LEFT)
         self.buttonFT = wx.Button(self.panel9, label="FT", size = (100,30))
@@ -655,6 +657,7 @@ Unused bits must be set to 0.  '''))
         self.textBoxProfile = self.controlTextLoadCellProfile
         self.textBoxIpa = self.controlTextIPAddress
         self.textBoxRate = self.controlTextRate
+        self.textBoxOversample = self.controlTextOversample
         self.textBoxSaveFile = self.controlTextSaveFile
         self.buttonDataTypeFT = self.buttonFT
         self.buttonDataTypeGage = self.buttonGuage
@@ -682,11 +685,15 @@ Unused bits must be set to 0.  '''))
         self.row12.Add(self.textIPAddress, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
         self.row12.Add(self.controlTextIPAddress, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
         self.row13 = wx.BoxSizer(wx.HORIZONTAL)
-        self.row13.Add(self.textRate, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
-        self.row131 = wx.BoxSizer(wx.HORIZONTAL)
-        self.row131.Add(self.controlTextRate, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
-        self.row131.Add(self.buttonApplyRate, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
-        self.row13.Add(self.row131, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.columnForRateAndOversample1 = wx.BoxSizer(wx.VERTICAL)
+        self.columnForRateAndOversample1.Add(self.textRate, proportion = 1, flag = wx.ALIGN_CENTRE_VERTICAL|wx.TOP, border = 10)
+        self.columnForRateAndOversample1.Add(self.textOversample, proportion = 1, flag = wx.ALIGN_CENTRE_VERTICAL|wx.TOP, border = 10)
+        self.columnForRateAndOversample2 = wx.BoxSizer(wx.VERTICAL)
+        self.columnForRateAndOversample2.Add(self.controlTextRate, proportion = 1, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
+        self.columnForRateAndOversample2.Add(self.controlTextOversample, proportion = 1, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
+        self.row13.Add(self.columnForRateAndOversample1, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.row13.Add(self.columnForRateAndOversample2, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.row13.Add(self.buttonApplyRate, proportion = 2, flag = wx.EXPAND|wx.ALL, border = 5)
         self.row14 = wx.BoxSizer(wx.HORIZONTAL)
         self.row14.Add(self.textDataType, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
         self.row141 = wx.BoxSizer(wx.HORIZONTAL)
@@ -708,6 +715,7 @@ Unused bits must be set to 0.  '''))
         self.panel9.SetSizerAndFit(self.column4)
         
         self.panel10 = wx.Panel(self)
+        self.panel10.SetDoubleBuffered(True)
         
         self.textBattery        = wx.StaticText(self.panel10, label = "Battery", style = wx.ALIGN_LEFT)
         self.textBatterySizer   = wx.BoxSizer(wx.HORIZONTAL)
@@ -768,6 +776,7 @@ Unused bits must be set to 0.  '''))
         self.panelSizerV2.Add(self.panelLED9, proportion = 1, flag = wx.EXPAND)
         
         self.panel12 = wx.Panel(self)
+        self.panel12.SetDoubleBuffered(True)
         
         self.boxTitle = wx.StaticBox(self.panel12, -1, "Measurement \n(load cell axes)")
         self.textX = wx.StaticText(self.panel12, label = "X =", style = wx.ALIGN_RIGHT)
@@ -776,21 +785,23 @@ Unused bits must be set to 0.  '''))
         self.textL = wx.StaticText(self.panel12, label = "L =", style = wx.ALIGN_RIGHT)
         self.textM = wx.StaticText(self.panel12, label = "M =", style = wx.ALIGN_RIGHT)
         self.textN = wx.StaticText(self.panel12, label = "N =", style = wx.ALIGN_RIGHT)
-        self.textXReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
-        self.textYReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
-        self.textZReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
-        self.textLReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
-        self.textMReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
-        self.textNReading = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_RIGHT)
-        self.textXUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
-        self.textYUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
-        self.textZUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
-        self.textLUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
-        self.textMUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
-        self.textNUnit = wx.StaticText(self.panel12, label = " ", style = wx.ALIGN_LEFT)
+        self.textXReading = wx.StaticText(self.panel12, size=(50,23), label = " ", style = wx.ALIGN_RIGHT)
+        self.textYReading = wx.StaticText(self.panel12, size=(50,23), label = " ", style = wx.ALIGN_RIGHT)
+        self.textZReading = wx.StaticText(self.panel12, size=(50,23), label = " ", style = wx.ALIGN_RIGHT)
+        self.textLReading = wx.StaticText(self.panel12, size=(50,23), label = " ", style = wx.ALIGN_RIGHT)
+        self.textMReading = wx.StaticText(self.panel12, size=(50,23), label = " ", style = wx.ALIGN_RIGHT)
+        self.textNReading = wx.StaticText(self.panel12, size=(50,23), label = " ", style = wx.ALIGN_RIGHT)
+        self.textXUnit = wx.StaticText(self.panel12, size=(100,23), label = " ", style = wx.ALIGN_LEFT)
+        self.textYUnit = wx.StaticText(self.panel12, size=(100,23), label = " ", style = wx.ALIGN_LEFT)
+        self.textZUnit = wx.StaticText(self.panel12, size=(100,23), label = " ", style = wx.ALIGN_LEFT)
+        self.textLUnit = wx.StaticText(self.panel12, size=(100,23), label = " ", style = wx.ALIGN_LEFT)
+        self.textMUnit = wx.StaticText(self.panel12, size=(100,23), label = " ", style = wx.ALIGN_LEFT)
+        self.textNUnit = wx.StaticText(self.panel12, size=(100,23), label = " ", style = wx.ALIGN_LEFT)
         self.buttonShowLoadsGraph = wx.Button(self.panel12, label="Show graph", size = (100,30))
         self.buttonBias = wx.Button(self.panel12, label="Bias", size = (100,30))
         #self.buttonUnbias = wx.Button(self.panel12, label="Unbias", size = (100,30))
+        self.buttonShowLoadsGraph.Disable()
+        self.buttonBias.Disable()
         
         self.column6 = wx.BoxSizer(wx.VERTICAL)
         self.column6.Add(self.textX, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
@@ -807,29 +818,29 @@ Unused bits must be set to 0.  '''))
         self.column7.Add(self.textMReading, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
         self.column7.Add(self.textNReading, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
         self.column8 = wx.BoxSizer(wx.VERTICAL)
-        self.column8.Add(self.textXUnit, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
-        self.column8.Add(self.textYUnit, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
-        self.column8.Add(self.textZUnit, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
-        self.column8.Add(self.textLUnit, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
-        self.column8.Add(self.textMUnit, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
-        self.column8.Add(self.textNUnit, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        self.column8.Add(self.textXUnit, proportion = 1, flag = wx.ALIGN_LEFT|wx.EXPAND|wx.ALL, border = 5)
+        self.column8.Add(self.textYUnit, proportion = 1, flag = wx.ALIGN_LEFT|wx.EXPAND|wx.ALL, border = 5)
+        self.column8.Add(self.textZUnit, proportion = 1, flag = wx.ALIGN_LEFT|wx.EXPAND|wx.ALL, border = 5)
+        self.column8.Add(self.textLUnit, proportion = 1, flag = wx.ALIGN_LEFT|wx.EXPAND|wx.ALL, border = 5)
+        self.column8.Add(self.textMUnit, proportion = 1, flag = wx.ALIGN_LEFT|wx.EXPAND|wx.ALL, border = 5)
+        self.column8.Add(self.textNUnit, proportion = 1, flag = wx.ALIGN_LEFT|wx.EXPAND|wx.ALL, border = 5)
         self.row18 = wx.StaticBoxSizer(self.boxTitle, wx.HORIZONTAL)
         self.row18.Add(self.column6, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
-        self.row18.Add(self.column7, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
-        self.row18.Add(self.column8, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.row18.Add(self.column7, proportion = 2, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.row18.Add(self.column8, proportion = 3, flag = wx.EXPAND|wx.ALL, border = 0)
         self.row19 = wx.BoxSizer(wx.HORIZONTAL)
         self.row19.Add(self.buttonBias, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
         #self.row19.Add(self.buttonUnbias, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
         self.column9 = wx.BoxSizer(wx.VERTICAL)
-        self.column9.Add(self.row18, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
-        self.column9.Add(self.buttonShowLoadsGraph, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
-        self.column9.Add(self.row19, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.column9.Add(self.row18, proportion = 6, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.column9.Add(self.buttonShowLoadsGraph, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.column9.Add(self.row19, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 0)
         self.panel12.SetSizerAndFit(self.column9)
         
         self.row17 = wx.BoxSizer(wx.HORIZONTAL)
         self.row17.Add(self.panelSizerV2, proportion = 2, flag = wx.EXPAND|wx.ALL, border = 0)
         self.row17.Add(self.panel10, proportion = 4, flag = wx.EXPAND|wx.ALL, border = 0)
-        self.row17.Add(self.panel12, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        self.row17.Add(self.panel12, proportion = 8, flag = wx.EXPAND|wx.ALL, border = 0)
         
         self.panel11 = wx.Panel(self)
         self.panel11.SetDoubleBuffered(True)
@@ -1089,25 +1100,27 @@ Unused bits must be set to 0.  '''))
 
     def OnACMSta(self, event) :
         self.txtACMSta.SetLabel(event.txt)
-        self.ggACMbat.SetValue(event.batpct)
+        self.battACM = event.batpct
+        self.guageACM.SetValue(self.battACM)
+        self.textBattACM.SetLabel(str(self.battACM)+"%")
         if event.batpct < 30:
-            self.ggACMbat.SetBarColor(wx.RED)
+            self.textBattACM.SetForegroundColour('red')
         elif event.batpct < 40:
-            self.ggACMbat.SetBarColor(wx.YELLOW)
+            self.textBattACM.SetForegroundColour('yellow')
         else:
-            self.ggACMbat.SetBarColor(wx.GREEN)
-        self.ggACMbat.Refresh()
+            self.textBattACM.SetForegroundColour('green')
 
     def OnCMPSta(self, event) :
         self.txtCMPSta.SetLabel(event.txt)
-        self.ggCMPbat.SetValue(event.batpct)
+        self.battCMP = event.batpct
+        self.guageCMP.SetValue(self.battCMP)
+        self.textBattCMP.SetLabel(str(self.battCMP)+"%")
         if event.batpct < 30:
-            self.ggCMPbat.SetBarColor(wx.RED)
+            self.textBattCMP.SetForegroundColour('red')
         elif event.batpct < 40:
-            self.ggCMPbat.SetBarColor(wx.YELLOW)
+            self.textBattCMP.SetForegroundColour('yellow')
         else:
-            self.ggCMPbat.SetBarColor(wx.GREEN)
-        self.ggCMPbat.Refresh()
+            self.textBattCMP.SetForegroundColour('green')
 
     def OnGNDSta(self, event) :
         self.txtGNDSta.SetLabel(event.txt)
@@ -1166,19 +1179,23 @@ Unused bits must be set to 0.  '''))
 
     def OnClr(self, event):
         self.log_txt.Clear()
-        self.txtRXSta.SetLabel('')
-        self.txtACMSta.SetLabel('')
-        self.txtCMPSta.SetLabel('')
-        self.txtGNDSta.SetLabel('')
-        self.txtACMDat.SetLabel('')
-        self.txtCMPDat.SetLabel('')
-        self.txtGNDDat.SetLabel('')
+        self.txtRXSta.SetLabel('...')
+        self.txtACMSta.SetLabel('...')
+        self.txtCMPSta.SetLabel('...')
+        self.txtGNDSta.SetLabel('...')
+        self.txtACMDat.SetLabel('...')
+        self.txtCMPDat.SetLabel('...')
+        self.txtGNDDat.SetLabel('...')
 
-        self.ggACMbat.SetValue(0)
-        self.ggACMbat.Refresh()
-        self.ggCMPbat.SetValue(0)
-        self.ggCMPbat.Refresh()
-        self.txtGNDinfo.SetLabel('')
+        self.battACM = 0
+        self.guageACM.SetValue(self.battACM)
+        self.textBattACM.SetLabel(str(self.battACM)+"%")
+        self.textBattACM.SetForegroundColour('black')
+        self.battCMP = 0
+        self.guageCMP.SetValue(self.battCMP)
+        self.textBattCMP.SetLabel(str(self.battCMP)+"%")
+        self.textBattCMP.SetForegroundColour('black')
+        self.txtGNDinfo.SetLabel('...')
 
         self.gui2msgcQueue.put({'ID': 'CLEAR'})
 
@@ -1411,11 +1428,15 @@ Unused bits must be set to 0.  '''))
             if self.screenController.m_connected == True:
                 self.buttonConnect.SetLabel('Disconnect')
                 self.buttonSaveFile.Enable()
+                self.buttonShowLoadsGraph.Enable()
+                self.buttonBias.Enable()
         elif self.screenController.m_connected == True:
             self.disconnect()
             if self.screenController.m_connected == False:
                 self.buttonConnect.SetLabel('Connect')
                 self.buttonSaveFile.Disable()
+                self.buttonShowLoadsGraph.Disable()
+                self.buttonBias.Disable()
     
     def connect(self):
         
@@ -1437,23 +1458,26 @@ Unused bits must be set to 0.  '''))
             self.textBoxRate.SetValue(self.screenController.m_profile.m_rate)
             
             # Starting panels 1 and 2.
-            self.PanelUpdateThread(self)
+            self.PanelUpdateThread = PanelUpdateThread(self)
             
             # Plot graphs (panel 3).
             #self.GraphPanel = GraphPanel(self, self.panel3)
-            
-            self.screenController.m_LastPacketTime = self.time.time()*1000
+
+            self.screenController.m_LastPacketTime = time.time()*1000
             self.screenController.m_packets = 0
             self.screenController.m_drops = 0 
             self.screenController.m_missedPackets = 0
             self.screenController.m_rxedPacketsAcc = 0
             self.screenController.m_OutOfOrders = 0
             self.screenController.m_Duplicates = 0
+            
     
     def disconnect(self):
         self.screenController.disconnectButtonPressed()
         self.buttonConnect.SetLabel('Connect')
         self.buttonSaveFile.Disable()
+        self.buttonShowLoadsGraph.Disable()
+        self.buttonBias.Disable()
         
         # Stoping graph, recreating panel3
         try:
@@ -1467,7 +1491,8 @@ Unused bits must be set to 0.  '''))
     def buttonApplyRatePressed(self, event):
         try:
             packetRate = int(self.textBoxRate.GetValue())
-            setPacketRate = self.screenController.m_btnApplyRatePressed(packetRate)
+            oversampleRate = int(self.textBoxOversample.GetValue())
+            setPacketRate = self.screenController.m_btnApplyRatePressed(packetRate, oversampleRate)
         except Exception as e:
             print e
 
@@ -1579,25 +1604,27 @@ class PanelUpdateThread:
             self.colourTransducer6   = self.main.screenController.colors[status2 >>  4 & 0x3]
             #self.main.panel1.Refresh()
             
-            self.panelLED1.colour = self.colourLEDBattery
-            self.panelLED1.Refresh()
-            self.panelLED2.colour = self.colourExternalPower
-            self.panelLED2.Refresh()
-            self.panelLED3.colour = self.colourWLAN
-            self.panelLED3.Refresh()
-            self.panelLED4.colour = self.colourTransducer1
-            self.panelLED4.Refresh()
-            self.panelLED5.colour = self.colourTransducer2
-            self.panelLED5.Refresh()
-            self.panelLED6.colour = self.colourTransducer3
-            self.panelLED6.Refresh()
-            self.panelLED7.colour = self.colourTransducer4
-            self.panelLED7.Refresh()
-            self.panelLED8.colour = self.colourTransducer5
-            self.panelLED8.Refresh()
-            self.panelLED9.colour = self.colourTransducer6
-            self.panelLED9.Refresh()
-            
+            try:
+                self.main.panelLED1.colour = self.colourLEDBattery
+                self.main.panelLED1.Refresh()
+                self.main.panelLED2.colour = self.colourExternalPower
+                self.main.panelLED2.Refresh()
+                self.main.panelLED3.colour = self.colourWLAN
+                self.main.panelLED3.Refresh()
+                self.main.panelLED4.colour = self.colourTransducer1
+                self.main.panelLED4.Refresh()
+                self.main.panelLED5.colour = self.colourTransducer2
+                self.main.panelLED5.Refresh()
+                self.main.panelLED6.colour = self.colourTransducer3
+                self.main.panelLED6.Refresh()
+                self.main.panelLED7.colour = self.colourTransducer4
+                self.main.panelLED7.Refresh()
+                self.main.panelLED8.colour = self.colourTransducer5
+                self.main.panelLED8.Refresh()
+                self.main.panelLED9.colour = self.colourTransducer6
+                self.main.panelLED9.Refresh()
+            except Exception as error:
+                print error
             
             # Update saturation flags.
             for transducer in range(0, self.main.screenController.m_model.MAX_SENSORS):

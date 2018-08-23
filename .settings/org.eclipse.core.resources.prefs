@@ -5,4 +5,7 @@ encoding/DynamicGraph.py=utf-8
 encoding/ExpData.py=utf-8
 encoding/MessageCenter.py=utf-8
 encoding/MessageFuncs.py=utf-8
+encoding/PayloadPackage.py=utf-8
+encoding/XBeeMessageFuncs.py=utf-8
+encoding/XBeeWifiNetwork.py=utf-8
 encoding/admin.py=utf-8

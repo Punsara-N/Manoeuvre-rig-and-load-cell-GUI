@@ -107,7 +107,7 @@ class DiscoveryClient:
                     print 'Timed out. (%i / 5)' % timeout_counter
                     timeout_counter += 1
                     if timeout_counter > 5:
-                        print '\nNo device found.'
+                        print 'No device found.'
                         break
                     pass
                 except Exception as e:
