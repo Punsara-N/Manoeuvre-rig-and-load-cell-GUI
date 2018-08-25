@@ -9,3 +9,4 @@ encoding/PayloadPackage.py=utf-8
 encoding/XBeeMessageFuncs.py=utf-8
 encoding/XBeeWifiNetwork.py=utf-8
 encoding/admin.py=utf-8
+encoding/utils.py=utf-8

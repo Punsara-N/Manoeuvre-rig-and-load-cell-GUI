@@ -226,6 +226,7 @@ class NTPPacket:
         self.tx_timestamp_high = unpacked[13]
         self.tx_timestamp_low = unpacked[14]
         
+        
         print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
         print 'Packet received from client:'
         print 'Leap: ' + str(self.leap)
@@ -239,13 +240,10 @@ class NTPPacket:
         print 'Ref ID: ' + str(self.ref_id)
         print 'Ref timestamp: ' + str(self.ref_timestamp)
         print 'Original timestamp: ' + str(self.orig_timestamp)
-        print 'Original timestamp high: ' + str(self.orig_timestamp_high)
-        print 'Original timestamp low: ' + str(self.orig_timestamp_low)
         print 'Recv timestamp: ' + str(self.recv_timestamp)
         print 'Tx timestamp: ' + str(self.tx_timestamp)
-        print 'Tx timestamp high: ' + str(self.tx_timestamp_high)
-        print 'Tx timestamp low: ' + str(self.tx_timestamp_low)
         print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+        
 
     def GetTxTimeStamp(self):
         return (self.tx_timestamp_high,self.tx_timestamp_low)
@@ -270,14 +268,19 @@ class RecvThread(threading.Thread):
                 break
             rlist,wlist,elist = select.select([self.socket],[],[],1);
             if len(rlist) != 0:
+                '''
                 print "Received %d packets" % len(rlist)
+                '''
                 for tempSocket in rlist:
                     try:
                         data,addr = tempSocket.recvfrom(1024)
-                        recvTimestamp = recvTimestamp = system_to_ntp_time(time.time())
+                        recvTimestamp = system_to_ntp_time(time.time())
                         self.taskQueue.put((data,addr,recvTimestamp))
                         self.requestsReceived += 1
-                        self.GUI.textNoSycRequestReceived.SetLabel(str(self.requestsReceived))
+                        try:
+                            self.GUI.textNoSycRequestReceived.SetLabel(str(self.requestsReceived))
+                        except:
+                            pass
                     except socket.error,msg:
                         print msg;
 
@@ -297,24 +300,24 @@ class WorkThread(threading.Thread):
                 recvPacket = NTPPacket()
                 recvPacket.from_data(data)
                 timeStamp_high,timeStamp_low = recvPacket.GetTxTimeStamp()
-                sendPacket = NTPPacket(version=3,mode=4)
-                sendPacket.stratum = 2
+                sendPacket = NTPPacket(version=4,mode=4)
+                sendPacket.stratum = 1
                 sendPacket.poll = 10
-                '''
-                sendPacket.precision = 0xfa
-                sendPacket.root_delay = 0x0bfa
-                sendPacket.root_dispersion = 0x0aa7
-                sendPacket.ref_id = 0x808a8c2c
-                '''
-                sendPacket.ref_timestamp = recvTimestamp-5 # recvTimestamp is the time the server received the request from the client
+                sendPacket.precision = -20 #0xfa
+                sendPacket.root_delay = 0 #0x0bfa
+                sendPacket.root_dispersion = 0 #0x0aa7
+                sendPacket.ref_id = 0xC0A8BF05#192.168.191.5 #0x808a8c2c
+                sendPacket.ref_timestamp = recvTimestamp # recvTimestamp is the time the server received the request from the client
+                sendPacket.orig_timestamp = recvPacket.tx_timestamp
                 sendPacket.SetOriginTimeStamp(timeStamp_high,timeStamp_low) # Takes tx_timestamp_high and tx_timestamp_low from packet received from client and puts in into orig_timestamp_high and orig_timestamp_low into sending packet from server.
                 sendPacket.recv_timestamp = recvTimestamp
                 sendPacket.tx_timestamp = system_to_ntp_time(time.time()) # Time right now
                 self.socket.sendto(sendPacket.to_data(),addr)
-                print "Sended to %s:%d" % (addr[0],addr[1])
+                
+                print "Sent to %s:%d" % (addr[0],addr[1])
                 
                 print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-                print 'Packet received from client:'
+                print 'Packet sent to client:'
                 print 'Leap: ' + str(sendPacket.leap)
                 print 'Version: ' + str(sendPacket.version)
                 print 'Mode: ' + str(sendPacket.mode)
@@ -324,15 +327,12 @@ class WorkThread(threading.Thread):
                 print 'Root delay: ' + str(sendPacket.root_delay)
                 print 'Root dispersion: ' + str(sendPacket.root_dispersion)
                 print 'Ref ID: ' + str(sendPacket.ref_id)
-                print 'Ref timestamp: ' + str(sendPacket.ref_timestamp)
-                print 'Original timestamp: ' + str(sendPacket.orig_timestamp)
-                print 'Original timestamp high: ' + str(sendPacket.orig_timestamp_high)
-                print 'Original timestamp low: ' + str(sendPacket.orig_timestamp_low)
-                print 'Recv timestamp: ' + str(sendPacket.recv_timestamp)
-                print 'Tx timestamp: ' + str(sendPacket.tx_timestamp)
-                print 'Tx timestamp high: ' + str(sendPacket.tx_timestamp_high)
-                print 'Tx timestamp low: ' + str(sendPacket.tx_timestamp_low)
+                print 'Ref timestamp: %.5f' %(sendPacket.ref_timestamp)
+                print 'Original timestamp: %.5f' %(sendPacket.orig_timestamp)
+                print 'Recv timestamp: %.5f' %(sendPacket.recv_timestamp)
+                print 'Tx timestamp: %.5f' %(sendPacket.tx_timestamp)
                 print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+                
         
             except Queue.Empty:
                 continue
@@ -363,35 +363,22 @@ class NTPServer():
         proto = addrInfo[2]
         addr = addrInfo[4]
         
-        soc = socket.socket(family, typee, proto)
-        soc.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # This allows the address/port to be reused immediately instead of it being stuck in the TIME_WAIT state for several minutes, waiting for late packets to arrive.
-        soc.bind(addr)
+        socNTP = socket.socket(family, typee, proto)
+        socNTP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # This allows the address/port to be reused immediately instead of it being stuck in the TIME_WAIT state for several minutes, waiting for late packets to arrive.
+        socNTP.bind(addr)
                     
-        print "local socket: ", soc.getsockname();
+        print "local socket: ", socNTP.getsockname();
         print "Active threads:" + str(threading.active_count())
-        self.recvThread = RecvThread(soc, taskQueue, GUI)
+        self.recvThread = RecvThread(socNTP, taskQueue, GUI)
         self.recvThread.daemon = True
         self.recvThread.start()
         print "Active threads:" + str(threading.active_count())
-        self.workThread = WorkThread(soc, taskQueue)
+        self.workThread = WorkThread(socNTP, taskQueue)
         self.workThread.daemon = True
         self.workThread.start()
         print "Active threads:" + str(threading.active_count())
         
         print "NTP server started!"
-        
-        '''
-        while True:
-            try:
-                time.sleep(0.5)
-            except KeyboardInterrupt:
-                print "Exiting..."
-                stopFlag = True
-                self.recvThread.join()
-                self.workThread.join()
-                print "Exited"
-                break
-        '''
         
         
     def stopServer(self):
@@ -411,7 +398,13 @@ class NTPServer():
             
 if __name__ == '__main__':
 
-    server = NTPServer()
-    time.sleep(5)
-    server.stopServer()
+    server = NTPServer(None, '192.168.191.5')
+    while True:
+            try:
+                time.sleep(0.5)
+            except KeyboardInterrupt:
+                print "Exiting..."
+                server.stopServer()
+                print "Exited"
+                break
         

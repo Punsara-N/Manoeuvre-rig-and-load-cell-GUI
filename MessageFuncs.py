@@ -47,7 +47,9 @@ def msg_start(self, cmd):
         self.socklist += self.xbee_network.getReadList()
         self.matlab_link = MatlabLink(self, cmd['matlab_ports'])
         self.socklist += self.matlab_link.getReadList()
+        self.T0epoch = time.time() * 1e6
         self.T0 = getMicroseconds()
+        self.T0_loadcell = self.T0epoch + self.T0
         self.ready = True
         self.expData.xbee_network = self.xbee_network
         self.expData.ACM_node = self.node_addr['ACM']
@@ -75,8 +77,10 @@ def cmd_rec_stop(self, cmd):
         self.log.info('Stop Recording to {}.'.format(self.filename))
 
 def cmd_set_base_time(self, cmd):
-    self.T0 = getMicroseconds()
+    self.T0 = self.T0epoch + getMicroseconds()
+    #print self.T0
     self.log.info('Reset T0')
+    self.msgc2guiQueue.put_nowait({'ID':'T0','info':self.T0})
 
 # data coming from process_function
 def cmd_at(self, cmd):

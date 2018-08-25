@@ -51,10 +51,11 @@ class WirelessFTSample:
                 + "\nSensor Mask: "     + str(self.m_sensorMask)
         return string
     
-    def listOfSamplesFromPacket(self, udpPacketData, udpPacketLength):
+    def listOfSamplesFromPacket(self, udpPacketData, udpPacketLength, receiveTime):
     
         import numpy as np
     
+        self.receiveTime = receiveTime
         samples = np.array([]) # Making new array (timestamp, sequence, statusCode1, statusCode2, batteryLevel, sensorMask, latency)
         sampleLength = self.getNumSensors() * self.SENSOR_RECORD_SIZE + self.PACKET_OVERHEAD # Get length of the sample block  
         for i in range(0, udpPacketLength, sampleLength):
@@ -123,11 +124,12 @@ class WirelessFTSample:
                 for channel in range (0, self.WirelessFTDemoModel.WirelessFTDemoModel.NUM_AXES): # For each channel,
                     self.m_ftOrGageData[transducer][channel] = packet[channel] # get the data. (I am taking the first four bytes and converting it into an integer)
     
+        
         '''
         # wnetTime, sysTime, and years70 are all type long in Java source code
         years70 = (((70 * 365) + 17) * 24 * 60 * 60) & 0xFFFFFFFF # 70 years (in seconds)
         wnetTime = self.m_timeStamp & 0xFFFFFFFF # Wnet's number of seconds since 1/1/1900 00:00 NTP (format 20.12) (unsigned long)
-        sysTime   = (time.time()*1000) & 0xFFFFFFFF # JAVA: System.currentTimeMillis() # System's number of milliseconds since 1/1/1970 00:00 UTC (format 64.0)
+        sysTime   = self.receiveTime & 0xFFFFFFFF# int(time.time()*1000) & 0xFFFFFFFF # JAVA: System.currentTimeMillis() # System's number of milliseconds since 1/1/1970 00:00 UTC (format 64.0)
         sysTime   = (sysTime + (years70 * 1000)) & 0xFFFFFFFF # Convert to number of milliseconds since 1/1/1900 00:00 (add 70 years)
         sysTime   = (((sysTime << 12) & 0xFFFFFFFF) / 1000)  & 0xFFFFFFFF # Convert to number of seconds since 1/1/1900 00:00 NTP (format 20.12)
         self.m_latency = (sysTime - wnetTime) & 0xFFFFFFFF # Calculate modulo 32-bits latency (20.12)
@@ -139,12 +141,15 @@ class WirelessFTSample:
         self.m_latency = (self.m_latency >> 12) & 0xFFFFFFFF # Convert to mS (32.0)
         if self.m_latency > 0x7FFFFFFF:
             self.m_latency -= 0xFFFFFFFF
-            
+        '''
+        
+        '''    
         self.m_timeStampms = self.m_timeStamp & 0xFFFFFFFF
         self.m_timeStampms = (self.m_timeStamp * 1000) & 0xFFFFFFFF
         self.m_timeStampms = (self.m_timeStamp >> 12) & 0xFFFFFFFF
         print (sysTime * 1000) & 0xFFFFFFFF - self.m_timeStampms
         '''
+        
         
         # Convert timestamp to unsigned 32bit
         m_timeStamp = self.m_timeStamp#2078044892
@@ -170,10 +175,12 @@ class WirelessFTSample:
         
         # So packet date/time = timestamp on packet + date/time of start of last rollover
         packetTime = startOfRollover + wnetTime/(2**12) # packet time since Epoch, in seconds
-        print 'Wnet time: ' + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(packetTime))   
+        #print 'Wnet time: ' + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(packetTime))   
         
-        self.m_latency = time.time()*1000 - packetTime*1000 # in milliseconds
-        print 'Clock offset: ' + str(self.m_latency)
+        self.delay = self.receiveTime - packetTime*1000 # in milliseconds
+        #print 'Delay: ' + str(self.delay) + ' ms'
+        self.m_latency = self.delay
+        #print self.m_latency
         
         
     def parse_bin(self, s):

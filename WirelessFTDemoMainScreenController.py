@@ -304,6 +304,7 @@ class WirelessFTDemoMainScreenController(object):
                 print 'Connected.'                
                 
                 self.m_readingRecords = True
+                
                 self.CollectData(self, self.mainWindow)
                 
                 self.setupPanels() ############## Setup panels.

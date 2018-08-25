@@ -100,6 +100,7 @@ class WirelessFTSensor:
         except Exception as e:
             print('Failed to create telnet port.')
             print(e)
+            self.initSockets(self.m_sensorAddress)
         
         try:
             self.time.sleep(0.1)
@@ -148,13 +149,12 @@ class WirelessFTSensor:
         return self.WirelessFTSample.WirelessFTSample(data, len(data))
     
     ''' Reads multiple samples from the UDP socket. '''
-    def readStreamingSamples(self):
-        import binascii
-        
+    def readStreamingSamples(self):        
 #        i = 0
 #        dataPackets = []
         while True:
             dataPacket = self.m_udpSocket.recv(self.DEFAULT_BUFFER_SIZE) # Get UDP packet from Wnet, server is the address of the socket sending the data.                 
+            receiveTime = float(self.time.time()*1000)
             #data_hexString = binascii.hexlify(dataPacket)
             #print 'Received data: %s' % data_hexString
 #            if len(dataPacket):
@@ -163,7 +163,7 @@ class WirelessFTSensor:
 #                dataPackets.append(dataPacket)
 #            if i>10:
 #                break # Break loop after i number of packets have received.
-            return self.WirelessFTSample.listOfSamplesFromPacket(dataPacket, len(dataPacket)) # Split UDP packet into indivual samples
+            return self.WirelessFTSample.listOfSamplesFromPacket(dataPacket, len(dataPacket), receiveTime) # Split UDP packet into indivual samples
         
     ''' Sends a firmware command over the WNet's Telnet socket. '''
     def sendTelnetCommand(self, command, clearInputBufferFirst):

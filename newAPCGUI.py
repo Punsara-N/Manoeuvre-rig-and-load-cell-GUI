@@ -845,7 +845,7 @@ Unused bits must be set to 0.  '''))
         self.panel11 = wx.Panel(self)
         self.panel11.SetDoubleBuffered(True)
         
-        text = "Packets: \nPacket rate (Hz): \nClock offset (ms): \nDrop events: \nPackets dropped: \nDrop rate (%): \nOut-of-orders: \nDuplicates:"
+        text = "Packets: \nPacket rate (Hz): \nClock offset + delay (ms): \nDrop events: \nPackets dropped: \nDrop rate (%): \nOut-of-orders: \nDuplicates:"
         self.textLoadCellPacketStats = wx.StaticText(self.panel11, label = text, style = wx.ALIGN_LEFT)
         data = " ...\n ...\n ...\n ...\n ...\n ...\n ...\n ..."
         self.textStats = wx.StaticText(self.panel11, label = data, style = wx.ALIGN_LEFT)
@@ -1005,6 +1005,8 @@ Unused bits must be set to 0.  '''))
                     wx.PostEvent(self, GND_StaEvent(txt=output['info']))
                 elif output['ID'] == 'GND_DAT':
                     wx.PostEvent(self, GND_DatEvent(txt=output['info']))
+                elif output['ID'] == 'T0':
+                    self.T0 = int(output['info'])
             except Queue.Empty:
                 pass
             
@@ -1587,7 +1589,8 @@ class PanelUpdateThread:
             try:
                 status1 = self.main.screenController.m_lastSample.getStatusCode1()
                 status2 = self.main.screenController.m_lastSample.getStatusCode2()
-            except:
+            except Exception as error:
+                print error
                 print 'No packets received. Try reconnecting or restarting wireless transmitter.'
                 self.timer.Stop()
                 return
@@ -1653,7 +1656,7 @@ class PanelUpdateThread:
             #print 'Out-of-order packets: %10d' % self.main.screenController.m_OutOfOrders
             #print 'Duplicate packets: %10d \n' % self.main.screenController.m_Duplicates
             
-            label='%10d \n%10.0f \n%10d \n%10d \n%10d \n%10.2f \n%10d \n%10d' % (self.main.screenController.m_packets, 
+            label='%10d \n%10.0f \n%10.3f \n%10d \n%10d \n%10.2f \n%10d \n%10d' % (self.main.screenController.m_packets, 
                                                                                  packetRate, 
                                                                                  self.main.screenController.m_lastSample.getLatency(), 
                                                                                  self.main.screenController.m_drops, 
