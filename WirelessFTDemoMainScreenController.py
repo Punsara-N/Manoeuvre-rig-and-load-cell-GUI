@@ -38,8 +38,6 @@ class WirelessFTDemoMainScreenController(object):
     m_OutOfOrders    = 0
     m_Duplicates     = 0
     
-    m_model = WirelessFTDemoModel.WirelessFTDemoModel() # The application model.
-    
     PREF_GAGE_OR_FT                 = 'ftOrGageData' # The preferred display startup (raw data or not).
     
     PREF_USER_ROOT_NODE_PATHNAME    = 'com.FTDemo.preference.Settings' # The preferences user root node pathname.
@@ -630,6 +628,8 @@ class WirelessFTDemoMainScreenController(object):
         self.MIN_UDP_RATE =    5
         self.MAX_UDP_RATE = 4000
         self.mainWindow = mainWindow
+        
+        self.m_model = self.WirelessFTDemoModel.WirelessFTDemoModel(self.mainWindow) # The application model.
     
     
     

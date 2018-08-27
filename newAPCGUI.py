@@ -845,9 +845,9 @@ Unused bits must be set to 0.  '''))
         self.panel11 = wx.Panel(self)
         self.panel11.SetDoubleBuffered(True)
         
-        text = "Packets: \nPacket rate (Hz): \nClock offset + delay (ms): \nDrop events: \nPackets dropped: \nDrop rate (%): \nOut-of-orders: \nDuplicates:"
+        text = "Packets: \nPacket rate (Hz): \nClock offset + delay (ms): \nDrop events: \nPackets dropped: \nDrop rate (%): \nOut-of-orders: \nDuplicates: \nTime:"
         self.textLoadCellPacketStats = wx.StaticText(self.panel11, label = text, style = wx.ALIGN_LEFT)
-        data = " ...\n ...\n ...\n ...\n ...\n ...\n ...\n ..."
+        data = " ...\n ...\n ...\n ...\n ...\n ...\n ...\n ...\n ..."
         self.textStats = wx.StaticText(self.panel11, label = data, style = wx.ALIGN_LEFT)
         self.buttonStartNTPServer = wx.Button(self.panel11, label="Start NTP server", size = (100,30))
         self.buttonStopNTPServer = wx.Button(self.panel11, label="Stop NTP server", size = (100,30))
@@ -1006,7 +1006,8 @@ Unused bits must be set to 0.  '''))
                 elif output['ID'] == 'GND_DAT':
                     wx.PostEvent(self, GND_DatEvent(txt=output['info']))
                 elif output['ID'] == 'T0':
-                    self.T0 = int(output['info'])
+                    self.T0 = int(output['info'][0])
+                    self.T0_loadcell = int(output['info'][1])
             except Queue.Empty:
                 pass
             
@@ -1656,14 +1657,15 @@ class PanelUpdateThread:
             #print 'Out-of-order packets: %10d' % self.main.screenController.m_OutOfOrders
             #print 'Duplicate packets: %10d \n' % self.main.screenController.m_Duplicates
             
-            label='%10d \n%10.0f \n%10.3f \n%10d \n%10d \n%10.2f \n%10d \n%10d' % (self.main.screenController.m_packets, 
-                                                                                 packetRate, 
-                                                                                 self.main.screenController.m_lastSample.getLatency(), 
-                                                                                 self.main.screenController.m_drops, 
-                                                                                 self.main.screenController.m_missedPackets,
-                                                                                 avgMissed,
-                                                                                 self.main.screenController.m_OutOfOrders,
-                                                                                 self.main.screenController.m_Duplicates)
+            label='%10d \n%10.0f \n%10.3f \n%10d \n%10d \n%10.2f \n%10d \n%10d \n%10.3f' % (self.main.screenController.m_packets, 
+                                                                                             packetRate, 
+                                                                                             self.main.screenController.m_lastSample.getLatency(), 
+                                                                                             self.main.screenController.m_drops, 
+                                                                                             self.main.screenController.m_missedPackets,
+                                                                                             avgMissed,
+                                                                                             self.main.screenController.m_OutOfOrders,
+                                                                                             self.main.screenController.m_Duplicates,
+                                                                                             self.main.screenController.loadcellTimeStamp)
                                                                                  
             self.main.textStats.SetLabel(label)
             

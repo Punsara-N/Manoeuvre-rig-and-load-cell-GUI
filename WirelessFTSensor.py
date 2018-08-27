@@ -21,8 +21,9 @@ class WirelessFTSensor:
     import time
     import socket
     import telnetlib
+    from utils import getMicroseconds
     
-    def __init__(self):
+    def __init__(self, mainWindow):
         
         import logging
         import WirelessFTSensorSampleCommand
@@ -40,6 +41,8 @@ class WirelessFTSensor:
         self.m_sensorAddress        = '' # The host name or IP address of the WNet.
         self.WirelessFTSensorSampleCommand = WirelessFTSensorSampleCommand.WirelessFTSensorSampleCommand()
         self.WirelessFTSample       = WirelessFTSample.WirelessFTSample()
+        
+        self.mainWindow = mainWindow
 
     '''
     Stops using the TCP and UDP sockets. TCP sockets are
@@ -154,7 +157,8 @@ class WirelessFTSensor:
 #        dataPackets = []
         while True:
             dataPacket = self.m_udpSocket.recv(self.DEFAULT_BUFFER_SIZE) # Get UDP packet from Wnet, server is the address of the socket sending the data.                 
-            receiveTime = float(self.time.time()*1000)
+            receiveTime = (self.T0epoch + self.getMicroseconds())/1000 # Milliseconds since Epoch, microseconds precision, better than -> float(self.time.time()*1000)
+            T0_loadcell = self.mainWindow.T0_loadcell
             #data_hexString = binascii.hexlify(dataPacket)
             #print 'Received data: %s' % data_hexString
 #            if len(dataPacket):
@@ -163,7 +167,7 @@ class WirelessFTSensor:
 #                dataPackets.append(dataPacket)
 #            if i>10:
 #                break # Break loop after i number of packets have received.
-            return self.WirelessFTSample.listOfSamplesFromPacket(dataPacket, len(dataPacket), receiveTime) # Split UDP packet into indivual samples
+            return self.WirelessFTSample.listOfSamplesFromPacket(dataPacket, len(dataPacket), receiveTime, T0_loadcell) # Split UDP packet into indivual samples
         
     ''' Sends a firmware command over the WNet's Telnet socket. '''
     def sendTelnetCommand(self, command, clearInputBufferFirst):

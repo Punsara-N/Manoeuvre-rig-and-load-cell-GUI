@@ -55,7 +55,7 @@ class WirelessFTDemoModel:
     
     logging.basicConfig(filename='wirelessft.log') # An error log for the application.
     
-    def __init__(self):
+    def __init__(self, mainWindow):
         
         #import WirelessFTDemoMainScreenController
         #import WirelessFTDemoProfile
@@ -68,6 +68,7 @@ class WirelessFTDemoModel:
         self.m_flagReadStreaming = False # Indicates that we are reading streaming data. 
         self.m_sensorAddressOrHostName = '' # The WNet's IP Address.
         self.m_fileUploadProgress = 0 # The progress of the file/firmware upload.
+        self.mainWindow = mainWindow
     
     '''
     Gets the percentage progress of the latest file upload.
@@ -119,7 +120,7 @@ class WirelessFTDemoModel:
     def connect(self, ipAddress, profile, save, m_controller):
         
         self.m_sensorAddressOrHostName      = ipAddress
-        self.m_sensor                       = self.WirelessFTSensor.WirelessFTSensor()
+        self.m_sensor                       = self.WirelessFTSensor.WirelessFTSensor(self.mainWindow)
         self.m_sensor.WirelessFTSensor(self.m_sensorAddressOrHostName)
         self.m_flagReadStreaming            = True
     

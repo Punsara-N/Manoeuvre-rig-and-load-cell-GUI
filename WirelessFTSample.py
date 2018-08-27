@@ -51,16 +51,17 @@ class WirelessFTSample:
                 + "\nSensor Mask: "     + str(self.m_sensorMask)
         return string
     
-    def listOfSamplesFromPacket(self, udpPacketData, udpPacketLength, receiveTime):
+    def listOfSamplesFromPacket(self, udpPacketData, udpPacketLength, receiveTime, T0_loadcell):
     
         import numpy as np
     
         self.receiveTime = receiveTime
+        self.T0_loadcell = T0_loadcell
         samples = np.array([]) # Making new array (timestamp, sequence, statusCode1, statusCode2, batteryLevel, sensorMask, latency)
         sampleLength = self.getNumSensors() * self.SENSOR_RECORD_SIZE + self.PACKET_OVERHEAD # Get length of the sample block  
         for i in range(0, udpPacketLength, sampleLength):
             singleRecord = udpPacketData[i:i+udpPacketLength] # Pick out next sample block
-            self.WirelessFTSample(singleRecord, udpPacketLength) # Decode the sample block
+            self.WirelessFTSample(singleRecord, udpPacketLength, self.receiveTime, self.T0_loadcell) # Decode the sample block
             sampleLength = self.getNumSensors() * self.SENSOR_RECORD_SIZE + self.PACKET_OVERHEAD # Get length of the sample block            
             #sample = np.array([self.m_timeStamp, self.m_sequence, self.m_statusCode1, self.m_statusCode2, self.m_batteryLevel, self.m_sensorMask, self.m_latency])
             sample = self
@@ -78,7 +79,7 @@ class WirelessFTSample:
     @throws IllegalArgumentException If length is incorrect or data is invalid.
     Samples come in at the packet RATE.
     '''
-    def WirelessFTSample(self, packetData, length):
+    def WirelessFTSample(self, packetData, length, receiveTime, T0_loadcell):
     
         import struct
         import time
@@ -161,8 +162,8 @@ class WirelessFTSample:
         
         # Find when last rollover started, the loadcell clock rests ever 2^20 seconds, clock started at midnight January 1, 1900 (70 years before Epoch (midnight January 1, 1970))
         years70 = ((70 * 365) + 17) * 24 * 60 * 60 # 70 years (in seconds)
-        secondsSinceStartOfTodayToNow = time.time() % (24*60*60)
-        secondsSinceStartOfWNetClockToStartOfDay = time.time() - secondsSinceStartOfTodayToNow + years70
+        secondsSinceStartOfTodayToNow = (receiveTime/1000) % (24*60*60)
+        secondsSinceStartOfWNetClockToStartOfDay = (receiveTime/1000) - secondsSinceStartOfTodayToNow + years70
         A = secondsSinceStartOfWNetClockToStartOfDay % 2**20 # seconds from start of last rollover before midnight to midnight
         B = wnetTime/(2**12) # Received timestamp, in seconds
         
@@ -181,6 +182,8 @@ class WirelessFTSample:
         #print 'Delay: ' + str(self.delay) + ' ms'
         self.m_latency = self.delay
         #print self.m_latency
+        
+        self.loadcellTimeStamp = packetTime*1000 - T0_loadcell/1000 # in milliseconds
         
         
     def parse_bin(self, s):
