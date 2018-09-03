@@ -16,12 +16,15 @@ Date: 26-06-2017
 Communicates with the WNET over Telnet.
 @author Sam Skuce, Chris Collins (ATI)
 '''
+
+from utils import getMicroseconds
+
 class WirelessFTSensor:
     
     import time
     import socket
     import telnetlib
-    from utils import getMicroseconds
+
     
     def __init__(self, mainWindow):
         
@@ -155,10 +158,16 @@ class WirelessFTSensor:
     def readStreamingSamples(self):        
 #        i = 0
 #        dataPackets = []
+
+        microseconds = getMicroseconds() + self.mainWindow.T0
         while True:
-            dataPacket = self.m_udpSocket.recv(self.DEFAULT_BUFFER_SIZE) # Get UDP packet from Wnet, server is the address of the socket sending the data.                 
-            receiveTime = (self.T0epoch + self.getMicroseconds())/1000 # Milliseconds since Epoch, microseconds precision, better than -> float(self.time.time()*1000)
+            dataPacket = self.m_udpSocket.recv(self.DEFAULT_BUFFER_SIZE) # Get UDP packet from Wnet, server is the address of the socket sending the data.
             T0_loadcell = self.mainWindow.T0_loadcell
+            T0epoch = self.mainWindow.T0epoch
+            time1 = int((T0epoch + getMicroseconds())/1000) # Milliseconds since Epoch, microseconds precision, better than -> float(self.time.time()*1000)
+            time2 = int(self.time.time()*1000) # Milliseconds since Epoch
+            diff = time1 - time2 # Difference between time1 and time 2 exists because getMicroseconds are called from different threads
+            receiveTime = time1 - diff # Milliseconds since Epoch, microseconds precision
             #data_hexString = binascii.hexlify(dataPacket)
             #print 'Received data: %s' % data_hexString
 #            if len(dataPacket):

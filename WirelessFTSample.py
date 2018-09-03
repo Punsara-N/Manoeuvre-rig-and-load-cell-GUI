@@ -163,6 +163,7 @@ class WirelessFTSample:
         # Find when last rollover started, the loadcell clock rests ever 2^20 seconds, clock started at midnight January 1, 1900 (70 years before Epoch (midnight January 1, 1970))
         years70 = ((70 * 365) + 17) * 24 * 60 * 60 # 70 years (in seconds)
         secondsSinceStartOfTodayToNow = (receiveTime/1000) % (24*60*60)
+        #print 'secondsSinceStartOfTodayToNow: ' + time.strftime('%H:%M:%S', time.localtime(secondsSinceStartOfTodayToNow)) 
         secondsSinceStartOfWNetClockToStartOfDay = (receiveTime/1000) - secondsSinceStartOfTodayToNow + years70
         A = secondsSinceStartOfWNetClockToStartOfDay % 2**20 # seconds from start of last rollover before midnight to midnight
         B = wnetTime/(2**12) # Received timestamp, in seconds
@@ -170,20 +171,20 @@ class WirelessFTSample:
         # Check if clock rolled over after midnight that day (before the packet was received), and correct date/time of start of last rollover accordingly
         # Note startOfRollOver is relative to epoch, in seconds
         if A > B:
-            startOfRollover = secondsSinceStartOfWNetClockToStartOfDay - years70 - A + 2**20 # Rollover happened after midnight before packet was received
+            startOfRollover = secondsSinceStartOfWNetClockToStartOfDay - years70 - A #+ 2**20 # Rollover happened after midnight before packet was received
         else:
             startOfRollover = secondsSinceStartOfWNetClockToStartOfDay - years70 - A
         
         # So packet date/time = timestamp on packet + date/time of start of last rollover
         packetTime = startOfRollover + wnetTime/(2**12) # packet time since Epoch, in seconds
-        #print 'Wnet time: ' + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(packetTime))   
+        #print 'Wnet time: ' + time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(packetTime))
         
         self.delay = self.receiveTime - packetTime*1000 # in milliseconds
         #print 'Delay: ' + str(self.delay) + ' ms'
         self.m_latency = self.delay
         #print self.m_latency
         
-        self.loadcellTimeStamp = packetTime*1000 - T0_loadcell/1000 # in milliseconds
+        self.loadcellTimeStamp = (packetTime*1000 - T0_loadcell/1000)/1000 # in seconds
         
         
     def parse_bin(self, s):
@@ -192,7 +193,7 @@ class WirelessFTSample:
     
     # The time stamp.
     def getTimeStamp(self):
-        return self.m_timeStamp
+        return self.loadcellTimeStamp#self.m_timeStamp
     
     # The latency value in mS.
     def getLatency(self):

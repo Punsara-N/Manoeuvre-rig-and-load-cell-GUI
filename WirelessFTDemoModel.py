@@ -156,7 +156,7 @@ class WirelessFTDemoModel:
             self.m_sensor.startStreamingData()
             pass
         except Exception as e:
-            logging.critical(e)
+            self.logging.critical(e)
             
     '''
     Sets the time and date within the WNet to

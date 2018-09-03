@@ -47,11 +47,16 @@ def msg_start(self, cmd):
         self.socklist += self.xbee_network.getReadList()
         self.matlab_link = MatlabLink(self, cmd['matlab_ports'])
         self.socklist += self.matlab_link.getReadList()
-        self.T0epoch = time.time() * 1e6
+        self.T0epoch = int(time.time() * 1e6)
         self.T0 = getMicroseconds()
         self.T0_loadcell = self.T0epoch + self.T0
-        # self.T0_loadcell = self.T0epoch + getMicroseconds()
-        self.msgc2guiQueue.put_nowait({'ID':'T0','info':[self.T0, self.T0_loadcell]})
+        try:
+            self.msgc2guiQueue.put_nowait({'ID':'T0','info':self.T0})
+            self.msgc2guiQueue.put_nowait({'ID':'T0_loadcell','info':self.T0_loadcell})
+            self.msgc2guiQueue.put_nowait({'ID':'T0epoch','info':self.T0epoch})
+            pass
+        except Exception as error:
+            print error
         self.ready = True
         self.expData.xbee_network = self.xbee_network
         self.expData.ACM_node = self.node_addr['ACM']
@@ -83,7 +88,7 @@ def cmd_set_base_time(self, cmd):
     self.T0_loadcell = self.T0epoch + self.T0
     #print self.T0
     self.log.info('Reset T0')
-    self.msgc2guiQueue.put_nowait({'ID':'T0','info':[self.T0, self.T0_loadcell]})
+    self.msgc2guiQueue.put_nowait({'ID':'T0_loadcell','info':self.T0_loadcell})
 
 # data coming from process_function
 def cmd_at(self, cmd):

@@ -76,7 +76,7 @@ if __name__ == '__main__':
     # Create the queues
     gui2msgcQueue = Queue()
     msgc2guiQueue = Queue()
-    gui2drawerQueue = Queue()
+    #gui2drawerQueue = Queue()
 
     # Create the worker process
     msg_process = Process(target=worker, args=(gui2msgcQueue, msgc2guiQueue))
@@ -92,7 +92,7 @@ if __name__ == '__main__':
     app = MyApp(redirect=True,
                 filename='AccessPointCenter.stderr.log',
                 process=[msg_process, graph_process],
-                gui2drawerQueue=gui2drawerQueue,
+                gui2drawerQueue=None,
                 gui2msgcQueue=gui2msgcQueue,
                 msgc2guiQueue=msgc2guiQueue)
     

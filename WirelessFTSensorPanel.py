@@ -194,8 +194,8 @@ class WirelessFTSensorPanel:
             #self.m_lblFUnits.setText("Voltage (" + m_forceUnits  + ")")
             #self.m_lblTUnits.setText("")
         else: # If displaying in force/torque,
-            forceCF      = self.m_forceConversionFactor;
-            torqueCF     = self.m_torqueConversionFactor;
+            forceCF      = self.m_forceConversionFactor
+            torqueCF     = self.m_torqueConversionFactor
             numberFormat = '%12.4f'
             self.FUnitsHeading = 'Force ('   + self.m_forceUnits  + ')'
             self.TUnitsHeading = 'Torque ('  + self.m_torqueUnits + ')'

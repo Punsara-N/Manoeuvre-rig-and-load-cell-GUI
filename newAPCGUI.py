@@ -121,6 +121,10 @@ class mainWindow(wx.Frame):
         
         super(mainWindow, self).__init__(None) # Runs __init__ of parent
         
+        self.T0 = 0
+        self.T0_loadcell = 0
+        self.T0epoch = 0
+        
         self.msg_process = process[0]
         self.graph_process = process[1]
         self.gui2msgcQueue = gui2msgcQueue
@@ -648,21 +652,21 @@ Unused bits must be set to 0.  '''))
         self.controlTextOversample = wx.TextCtrl(self.panel9, size = (50,23), value = self.parser.get('main', 'oversample'))
         self.buttonApplyRate = wx.Button(self.panel9, label="Apply rate", size = (100,30))
         self.textDataType = wx.StaticText(self.panel9, label = "Data type:", style = wx.ALIGN_LEFT)
-        self.buttonFT = wx.Button(self.panel9, label="FT", size = (100,30))
+        self.buttonFT = wx.Button(self.panel9, label="Force / Torque", size = (100,30))
         self.buttonGuage = wx.Button(self.panel9, label="Gage", size = (100,30))
-        self.textSaveFile = wx.StaticText(self.panel9, label = "Save file:", style = wx.ALIGN_LEFT)
-        self.controlTextSaveFile = wx.TextCtrl(self.panel9, size = (150,23), value = self.parser.get('main', 'savefile'))
-        self.buttonCollectData = wx.Button(self.panel9, label="Collect data", size = (100,30))
+        #self.textSaveFile = wx.StaticText(self.panel9, label = "Save file:", style = wx.ALIGN_LEFT)
+        #self.controlTextSaveFile = wx.TextCtrl(self.panel9, size = (150,23), value = self.parser.get('main', 'savefile'))
+        #self.buttonCollectData = wx.Button(self.panel9, label="Collect data", size = (100,30))
         
         self.textBoxProfile = self.controlTextLoadCellProfile
         self.textBoxIpa = self.controlTextIPAddress
         self.textBoxRate = self.controlTextRate
         self.textBoxOversample = self.controlTextOversample
-        self.textBoxSaveFile = self.controlTextSaveFile
+        #self.textBoxSaveFile = self.controlTextSaveFile
         self.buttonDataTypeFT = self.buttonFT
         self.buttonDataTypeGage = self.buttonGuage
-        self.buttonSaveFile = self.buttonCollectData
-        self.buttonSaveFile.Disable()
+        #self.buttonSaveFile = self.buttonCollectData
+        #self.buttonSaveFile.Disable()
         
         self.panelLED1 = LED(self)
         self.panelLED2 = LED(self)
@@ -700,18 +704,18 @@ Unused bits must be set to 0.  '''))
         self.row141.Add(self.buttonFT, proportion = 1, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
         self.row141.Add(self.buttonGuage, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
         self.row14.Add(self.row141, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
-        self.row15 = wx.BoxSizer(wx.HORIZONTAL)
-        self.row15.Add(self.textSaveFile, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
-        self.row15.Add(self.controlTextSaveFile, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
-        self.row16 = wx.BoxSizer(wx.HORIZONTAL)
-        self.row16.Add(self.buttonCollectData, proportion = 1, flag = wx.ALL, border = 5)
+        #self.row15 = wx.BoxSizer(wx.HORIZONTAL)
+        #self.row15.Add(self.textSaveFile, proportion = 0, flag = wx.ALIGN_CENTRE_VERTICAL|wx.ALL, border = 5)
+        #self.row15.Add(self.controlTextSaveFile, proportion = 1, flag = wx.EXPAND|wx.ALL, border = 5)
+        #self.row16 = wx.BoxSizer(wx.HORIZONTAL)
+        #self.row16.Add(self.buttonCollectData, proportion = 1, flag = wx.ALL, border = 5)
         self.column4.Add(self.row10, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
         self.column4.Add(self.row11, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
         self.column4.Add(self.row12, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
         self.column4.Add(self.row13, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
         self.column4.Add(self.row14, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
-        self.column4.Add(self.row15, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
-        self.column4.Add(self.row16, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        #self.column4.Add(self.row15, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
+        #self.column4.Add(self.row16, proportion = 0, flag = wx.EXPAND|wx.ALL, border = 0)
         self.panel9.SetSizerAndFit(self.column4)
         
         self.panel10 = wx.Panel(self)
@@ -920,7 +924,7 @@ Unused bits must be set to 0.  '''))
         self.Bind(wx.EVT_BUTTON, self.buttonApplyRatePressed, self.buttonApplyRate)
         self.Bind(wx.EVT_BUTTON, self.DataTypeFT, self.buttonDataTypeFT)
         self.Bind(wx.EVT_BUTTON, self.DataTypeGage, self.buttonDataTypeGage)
-        self.Bind(wx.EVT_BUTTON, self.SaveFile, self.buttonSaveFile)
+        #self.Bind(wx.EVT_BUTTON, self.SaveFile, self.buttonSaveFile)
         self.Bind(wx.EVT_BUTTON, self.openConfigWindow, self.buttonProfile)
         self.Bind(wx.EVT_BUTTON, self.biasUnbiasButtonPressed, self.buttonBias)
         self.Bind(wx.EVT_BUTTON, self.openLoadsGraph, self.buttonShowLoadsGraph)
@@ -938,12 +942,24 @@ Unused bits must be set to 0.  '''))
         """
         Stop the task queue, terminate processes and close the window.
         """
-        busy = wx.BusyInfo("Waiting for processes to terminate...", self)
+        busy = wx.BusyInfo("Waiting for processes to terminate...", self) 
         # Stop processing tasks and terminate the processes
         self.processTerm()
         self.keepgoing = False
         self.msg_thread.join()
+        
+        # Disconnecting loadcell if it's connected
+        if self.screenController.m_connected == True:
+            self.disconnect()
+            if self.screenController.m_connected == False:
+                self.buttonConnect.SetLabel('Connect')
+                
         self.saveConfig()
+        
+        print 'Active threads remaining:'
+        for thread in threading.enumerate():
+            print(thread.name)
+
         self.Destroy()
         
         
@@ -965,7 +981,6 @@ Unused bits must be set to 0.  '''))
         parser.set('main', 'profile', self.textBoxProfile.GetValue())
         parser.set('main', 'ipa', self.textBoxIpa.GetValue())
         parser.set('main', 'rate', self.textBoxRate.GetValue())
-        parser.set('main', 'saveFile', self.textBoxSaveFile.GetValue())
         cfg = open('config.ini', 'w')
         parser.write(cfg)
         cfg.close()
@@ -980,7 +995,7 @@ Unused bits must be set to 0.  '''))
                 output = self.msgc2guiQueue.get(block=True,timeout=0.2)
                 if output['ID'] == 'ExpData':
                     wx.PostEvent(self, EXP_DatEvent(states=output['states']))
-                    self.gui2drawerQueue.put_nowait(output)
+                    #self.gui2drawerQueue.put_nowait(output)
                 elif output['ID'] == 'info':
                     self.log.info(':'.join(['MSGC:',output['content']]))
                 elif output['ID'] == 'Statistics':
@@ -1006,8 +1021,14 @@ Unused bits must be set to 0.  '''))
                 elif output['ID'] == 'GND_DAT':
                     wx.PostEvent(self, GND_DatEvent(txt=output['info']))
                 elif output['ID'] == 'T0':
-                    self.T0 = int(output['info'][0])
-                    self.T0_loadcell = int(output['info'][1])
+                    self.T0 = int(output['info'])
+                    print 'T0: ' + str(self.T0)
+                elif output['ID'] == 'T0_loadcell':
+                    self.T0_loadcell = int(output['info'])
+                    print 'T0_loadcell: ' + str(self.T0_loadcell)
+                elif output['ID'] == 'T0epoch':
+                    self.T0epoch = int(output['info']) # Epoch in microseconds (milliseconds accuracy)
+                    print 'T0epoch: ' + str(self.T0epoch)
             except Queue.Empty:
                 pass
             
@@ -1019,12 +1040,15 @@ Unused bits must be set to 0.  '''))
         # Terminate message center processes
         while self.msg_process.is_alive():
             self.gui2msgcQueue.put_nowait({'ID': 'STOP'})
-            self.msg_process.join(0.5)
+            self.msg_process.terminate()
+            self.msg_process.join()
+            print 'msg_process terminated'
 
         try:
-            if self.graph_process.is_alive():
-                self.graph_process.terminate()
-                self.graph_process.join()
+            if self.graph_process != None:
+                if self.graph_process.is_alive():
+                    self.graph_process.terminate()
+                    self.graph_process.join()
         except Exception as error:
             print error
             
@@ -1061,12 +1085,14 @@ Unused bits must be set to 0.  '''))
         
     def OnRecALL(self, event) :
         if event.IsChecked():
+            self.SaveFile(None)
             filename = time.strftime(
                     'FIWT_Exp{:03d}_%Y%m%d%H%M%S.dat'.format(
                         int(self.txtRecName.GetValue()[:3])))
             self.gui2msgcQueue.put({'ID': 'REC_START',
                 'filename': filename})
         else:
+            self.SaveFile(None)
             self.gui2msgcQueue.put({'ID': 'REC_STOP'})
 
     def OnSetBaseTime(self, event) :
@@ -1430,14 +1456,14 @@ Unused bits must be set to 0.  '''))
             self.connect()
             if self.screenController.m_connected == True:
                 self.buttonConnect.SetLabel('Disconnect')
-                self.buttonSaveFile.Enable()
+                #self.buttonSaveFile.Enable()
                 self.buttonShowLoadsGraph.Enable()
                 self.buttonBias.Enable()
         elif self.screenController.m_connected == True:
             self.disconnect()
             if self.screenController.m_connected == False:
                 self.buttonConnect.SetLabel('Connect')
-                self.buttonSaveFile.Disable()
+                #self.buttonSaveFile.Disable()
                 self.buttonShowLoadsGraph.Disable()
                 self.buttonBias.Disable()
     
@@ -1478,7 +1504,7 @@ Unused bits must be set to 0.  '''))
     def disconnect(self):
         self.screenController.disconnectButtonPressed()
         self.buttonConnect.SetLabel('Connect')
-        self.buttonSaveFile.Disable()
+        #self.buttonSaveFile.Disable()
         self.buttonShowLoadsGraph.Disable()
         self.buttonBias.Disable()
         
@@ -1509,11 +1535,11 @@ Unused bits must be set to 0.  '''))
         print 'Changing data type to gage.'
         self.screenController.changeGageFT(False)
         
-    def SaveFile(self, event):
-        filename = self.textBoxSaveFile.GetValue()
+    def SaveFile(self, event): # Integrating with main record button
+        filename = self.controlTextExpNumber.GetValue() # self.textBoxSaveFile.GetValue()
         self.screenController.collectDataButtonPressed(filename)
         
-        self.buttonSaveFile.SetLabel(self.screenController.m_btnCollectData)
+        #self.buttonSaveFile.SetLabel(self.screenController.m_btnCollectData)
     
     def SaveSettings(self):
         try: # Delete config file if it exists.
@@ -1528,7 +1554,7 @@ Unused bits must be set to 0.  '''))
             config.set('main', 'profile', self.textBoxProfile.GetValue())
             config.set('main', 'ipa', self.textBoxIpa.GetValue())
             config.set('main', 'rate', self.textBoxRate.GetValue())
-            config.set('main', 'saveFile', self.textBoxSaveFile.GetValue())
+            #config.set('main', 'saveFile', self.textBoxSaveFile.GetValue())
             
             with open('config.ini', 'w') as f:
                 config.write(f)
@@ -1657,17 +1683,20 @@ class PanelUpdateThread:
             #print 'Out-of-order packets: %10d' % self.main.screenController.m_OutOfOrders
             #print 'Duplicate packets: %10d \n' % self.main.screenController.m_Duplicates
             
-            label='%10d \n%10.0f \n%10.3f \n%10d \n%10d \n%10.2f \n%10d \n%10d \n%10.3f' % (self.main.screenController.m_packets, 
-                                                                                             packetRate, 
-                                                                                             self.main.screenController.m_lastSample.getLatency(), 
-                                                                                             self.main.screenController.m_drops, 
-                                                                                             self.main.screenController.m_missedPackets,
-                                                                                             avgMissed,
-                                                                                             self.main.screenController.m_OutOfOrders,
-                                                                                             self.main.screenController.m_Duplicates,
-                                                                                             self.main.screenController.loadcellTimeStamp)
-                                                                                 
-            self.main.textStats.SetLabel(label)
+            try:
+                label='%10d \n%10.0f \n%10.3f \n%10d \n%10d \n%10.2f \n%10d \n%10d \n%10.6f' % (self.main.screenController.m_packets, 
+                                                                                                 packetRate, 
+                                                                                                 self.main.screenController.m_lastSample.getLatency(), 
+                                                                                                 self.main.screenController.m_drops, 
+                                                                                                 self.main.screenController.m_missedPackets,
+                                                                                                 avgMissed,
+                                                                                                 self.main.screenController.m_OutOfOrders,
+                                                                                                 self.main.screenController.m_Duplicates,
+                                                                                                 self.main.screenController.m_lastSample.loadcellTimeStamp)
+                                                                                     
+                self.main.textStats.SetLabel(label)
+            except Exception as error:
+                print error
             
             # Forces and moments values.
             self.main.screenController.panel.setSensorData(self.main.screenController.m_lastSample)

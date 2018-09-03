@@ -121,7 +121,9 @@ class NTPPacket:
     _PACKET_FORMAT = "!B B B b 11I"
     """packet format to pack/unpack"""
 
-    def __init__(self, version=2, mode=3, tx_timestamp=0):
+    def __init__(self, version=2, mode=3, tx_timestamp=0, printFlag=False):
+        
+        self.printFlag = printFlag
         """Constructor.
 
         Parameters:
@@ -226,23 +228,23 @@ class NTPPacket:
         self.tx_timestamp_high = unpacked[13]
         self.tx_timestamp_low = unpacked[14]
         
-        
-        print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-        print 'Packet received from client:'
-        print 'Leap: ' + str(self.leap)
-        print 'Version: ' + str(self.version)
-        print 'Mode: ' + str(self.mode)
-        print 'Stratum: ' + str(self.stratum)
-        print 'Poll: ' + str(self.poll)
-        print 'Precision: ' + str(self.precision)
-        print 'Root delay: ' + str(self.root_delay)
-        print 'Root dispersion: ' + str(self.root_dispersion)
-        print 'Ref ID: ' + str(self.ref_id)
-        print 'Ref timestamp: ' + str(self.ref_timestamp)
-        print 'Original timestamp: ' + str(self.orig_timestamp)
-        print 'Recv timestamp: ' + str(self.recv_timestamp)
-        print 'Tx timestamp: ' + str(self.tx_timestamp)
-        print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+        if self.printFlag == True:
+            print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+            print 'Packet received from client:'
+            print 'Leap: ' + str(self.leap)
+            print 'Version: ' + str(self.version)
+            print 'Mode: ' + str(self.mode)
+            print 'Stratum: ' + str(self.stratum)
+            print 'Poll: ' + str(self.poll)
+            print 'Precision: ' + str(self.precision)
+            print 'Root delay: ' + str(self.root_delay)
+            print 'Root dispersion: ' + str(self.root_dispersion)
+            print 'Ref ID: ' + str(self.ref_id)
+            print 'Ref timestamp: ' + str(self.ref_timestamp)
+            print 'Original timestamp: ' + str(self.orig_timestamp)
+            print 'Recv timestamp: ' + str(self.recv_timestamp)
+            print 'Tx timestamp: ' + str(self.tx_timestamp)
+            print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
         
 
     def GetTxTimeStamp(self):
@@ -254,7 +256,8 @@ class NTPPacket:
         
 
 class RecvThread(threading.Thread):
-    def __init__(self,socket,queue,GUI):
+    def __init__(self,socket,queue,GUI, printFlag):
+        self.printFlag = printFlag
         threading.Thread.__init__(self)
         self.socket = socket
         self.stopFlag = False
@@ -264,7 +267,8 @@ class RecvThread(threading.Thread):
     def run(self):
         while True:
             if self.stopFlag == True:
-                print "RecvThread Ended"
+                if self.printFlag:
+                    print "RecvThread Ended"
                 break
             rlist,wlist,elist = select.select([self.socket],[],[],1);
             if len(rlist) != 0:
@@ -285,7 +289,8 @@ class RecvThread(threading.Thread):
                         print msg;
 
 class WorkThread(threading.Thread):
-    def __init__(self,socket,queue):        
+    def __init__(self,socket,queue, printFlag):  
+        self.printFlag = printFlag      
         threading.Thread.__init__(self)
         self.socket = socket
         self.stopFlag = False
@@ -293,14 +298,15 @@ class WorkThread(threading.Thread):
     def run(self):
         while True:
             if self.stopFlag == True:
-                print "WorkThread Ended"
+                if self.printFlag:
+                    print "WorkThread Ended"
                 break
             try:
                 data,addr,recvTimestamp = self.taskQueue.get(timeout=1)
-                recvPacket = NTPPacket()
+                recvPacket = NTPPacket(printFlag=False)
                 recvPacket.from_data(data)
                 timeStamp_high,timeStamp_low = recvPacket.GetTxTimeStamp()
-                sendPacket = NTPPacket(version=4,mode=4)
+                sendPacket = NTPPacket(version=4,mode=4,printFlag=False)
                 sendPacket.stratum = 1
                 sendPacket.poll = 10
                 sendPacket.precision = -20 #0xfa
@@ -314,42 +320,46 @@ class WorkThread(threading.Thread):
                 sendPacket.tx_timestamp = system_to_ntp_time(time.time()) # Time right now
                 self.socket.sendto(sendPacket.to_data(),addr)
                 
-                print "Sent to %s:%d" % (addr[0],addr[1])
-                
-                print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
-                print 'Packet sent to client:'
-                print 'Leap: ' + str(sendPacket.leap)
-                print 'Version: ' + str(sendPacket.version)
-                print 'Mode: ' + str(sendPacket.mode)
-                print 'Stratum: ' + str(sendPacket.stratum)
-                print 'Poll: ' + str(sendPacket.poll)
-                print 'Precision: ' + str(sendPacket.precision)
-                print 'Root delay: ' + str(sendPacket.root_delay)
-                print 'Root dispersion: ' + str(sendPacket.root_dispersion)
-                print 'Ref ID: ' + str(sendPacket.ref_id)
-                print 'Ref timestamp: %.5f' %(sendPacket.ref_timestamp)
-                print 'Original timestamp: %.5f' %(sendPacket.orig_timestamp)
-                print 'Recv timestamp: %.5f' %(sendPacket.recv_timestamp)
-                print 'Tx timestamp: %.5f' %(sendPacket.tx_timestamp)
-                print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+                if self.printFlag:
+                    print "Sent to %s:%d" % (addr[0],addr[1])
+                    
+                    print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
+                    print 'Packet sent to client:'
+                    print 'Leap: ' + str(sendPacket.leap)
+                    print 'Version: ' + str(sendPacket.version)
+                    print 'Mode: ' + str(sendPacket.mode)
+                    print 'Stratum: ' + str(sendPacket.stratum)
+                    print 'Poll: ' + str(sendPacket.poll)
+                    print 'Precision: ' + str(sendPacket.precision)
+                    print 'Root delay: ' + str(sendPacket.root_delay)
+                    print 'Root dispersion: ' + str(sendPacket.root_dispersion)
+                    print 'Ref ID: ' + str(sendPacket.ref_id)
+                    print 'Ref timestamp: %.5f' %(sendPacket.ref_timestamp)
+                    print 'Original timestamp: %.5f' %(sendPacket.orig_timestamp)
+                    print 'Recv timestamp: %.5f' %(sendPacket.recv_timestamp)
+                    print 'Tx timestamp: %.5f' %(sendPacket.tx_timestamp)
+                    print 'Delay (s): %.6f (recv - original timestamp)' %(sendPacket.recv_timestamp - sendPacket.orig_timestamp)
+                    print '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@'
                 
         
             except Queue.Empty:
                 continue
-                
+              
 
 class NTPServer():
     
-    def __init__(self, GUI, serverIP):
+    def __init__(self, GUI, serverIP, printFlag=False):
         
-        taskQueue = Queue.Queue()
+        self.printFlag = printFlag
+        
+        self.taskQueue = Queue.Queue()
         
         try:
             win32serviceutil.StopService('W32Time') # Stops windows time service
         except Exception as error:
-            print error
-            print "Note: Make sure W32Time service is stopped to ensure NTP port is accessible"
-        
+            if self.printFlag:
+                print error
+                print "Note: Make sure W32Time service is stopped to ensure NTP port is accessible"
         print "Starting NTP server..."
         print "Server IP: " + serverIP
         
@@ -366,19 +376,23 @@ class NTPServer():
         socNTP = socket.socket(family, typee, proto)
         socNTP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # This allows the address/port to be reused immediately instead of it being stuck in the TIME_WAIT state for several minutes, waiting for late packets to arrive.
         socNTP.bind(addr)
-                    
-        print "local socket: ", socNTP.getsockname();
-        print "Active threads:" + str(threading.active_count())
-        self.recvThread = RecvThread(socNTP, taskQueue, GUI)
+        
+        if self.printFlag:            
+            print "local socket: ", socNTP.getsockname();
+            print "Active threads:" + str(threading.active_count())
+        self.recvThread = RecvThread(socNTP, self.taskQueue, GUI, self.printFlag)
         self.recvThread.daemon = True
         self.recvThread.start()
-        print "Active threads:" + str(threading.active_count())
-        self.workThread = WorkThread(socNTP, taskQueue)
+        if self.printFlag:
+            print "Active threads:" + str(threading.active_count())
+        self.workThread = WorkThread(socNTP, self.taskQueue, self.printFlag)
         self.workThread.daemon = True
         self.workThread.start()
-        print "Active threads:" + str(threading.active_count())
+        if self.printFlag:
+            print "Active threads:" + str(threading.active_count())
         
-        print "NTP server started!"
+        if self.printFlag:
+            print "NTP server started!"
         
         
     def stopServer(self):
@@ -392,13 +406,26 @@ class NTPServer():
         try:
             win32serviceutil.StartService('W32Time')
         except Exception as error:
-            print error
+            if self.printFlag:
+                print error
+        
+        if self.printFlag:    
+            print 'Emptying Queue...'
+        while not self.taskQueue.empty():
+            if self.printFlag:
+                print 'Emptying...'
+            self.taskQueue.get()
+        if self.printFlag:
+            print 'Queue empty? ' +  str(self.taskQueue.empty())
+        if self.printFlag:
+            print 'Emptied!' 
+            
         print "Stopped"
             
             
 if __name__ == '__main__':
 
-    server = NTPServer(None, '192.168.191.5')
+    server = NTPServer(None, '192.168.191.5', printFlag = True)
     while True:
             try:
                 time.sleep(0.5)

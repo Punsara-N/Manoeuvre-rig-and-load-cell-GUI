@@ -3,6 +3,7 @@ encoding/AccessPointCenter.py=utf-8
 encoding/AccessPointFrame.py=utf-8
 encoding/DynamicGraph.py=utf-8
 encoding/ExpData.py=utf-8
+encoding/MatlabLink.py=utf-8
 encoding/MessageCenter.py=utf-8
 encoding/MessageFuncs.py=utf-8
 encoding/PayloadPackage.py=utf-8

@@ -302,15 +302,15 @@ class WirelessFTDemoMainScreenController(object):
                 print 'Connected.'                
                 
                 self.m_readingRecords = True
-                
-                self.CollectData(self, self.mainWindow)
-                
                 self.setupPanels() ############## Setup panels.
-                self.refreshCalibrationInformation()
+                
                 
                 ftData = True # So that I will get forces/moments instead of gage values.
                 self.setOnlineMode(True, ftData) # Switch to online UI mode and set data type.
                 self.changeGageFT(ftData)
+                
+                self.CollectData(self, self.mainWindow)
+                self.refreshCalibrationInformation()
                 
                 self.m_connected = True
                 
@@ -404,7 +404,7 @@ class WirelessFTDemoMainScreenController(object):
                 currentSecond     = currentTimeString.split(':')[2].split('.')[0] # E.g.: '16'
                 currentMilliSecond= currentTimeString.split(':')[2].split('.')[1][:3] # E.g.: '786'
                 
-                filename = filename + '_' + currentYear + '_' + currentMonth + '_' + currentDay + '_' + currentHour + '_' + currentMinute + '_' + currentSecond + '_' + currentMilliSecond + extension
+                filename = 'FIWT_Exp' + filename + '_' + currentYear + '_' + currentMonth + '_' + currentDay + '_' + currentHour + '_' + currentMinute + '_' + currentSecond + '_' + currentMilliSecond + extension
                                 
                 print 'Saving data to file:' + str(filename)
                 
@@ -434,9 +434,23 @@ class WirelessFTDemoMainScreenController(object):
             self.m_bufferedWriter = self.io.BufferedWriter(self.io.FileIO(filename, 'w'))
             
             # Column headers:
-            self.m_bufferedWriter.write('Time, Mask, Bat, Sts1, Sts2, Seq #')
+            self.m_bufferedWriter.write('Time (s), Mask, Bat, Sts1, Sts2, Seq #, Delay (ms)')
             channelNames = ['FX', 'FY', 'FZ', 'TX', 'TY', 'TZ']
             gageNames = ['G0', 'G1', 'G2', 'G3', 'G4', 'G5']
+            
+            # Load conversion factors
+            voltage = self.panel.m_forceUnits.lower()=='mv'
+            if not self.panel.m_forceTorqueButton: # If displaying in gage,
+                self.forceCF      = 1.0
+                self.torqueCF     = 1.0
+            elif voltage: # If displaying in voltage,
+                self.forceCF      = self.panel.m_forceConversionFactor
+                self.torqueCF     = self.panel.m_torqueConversionFactor
+            else: # If displaying in force/torque,
+                self.forceCF      = self.panel.m_forceConversionFactor
+                self.torqueCF     = self.panel.m_torqueConversionFactor
+                
+            print 'Force conversion factor: %f, moment conversion factor: %f' %(self.forceCF,self.torqueCF)
             
             for transducer in range(0, self.WirelessFTDemoModel.WirelessFTDemoModel.MAX_SENSORS):
                 if self.m_model.m_sensorActive[transducer]:
@@ -450,6 +464,7 @@ class WirelessFTDemoMainScreenController(object):
     class CollectData:
         
         import time
+        from SimulinkUDPLink import SimulinkSocket
         
         # Separate from the UDP receive timeout, 
         # this is the longest time the Demo is
@@ -464,6 +479,7 @@ class WirelessFTDemoMainScreenController(object):
             self.main = main
             self.mainWindow = mainWindow
             self.CollectDataThread()
+            self.simulinkLink = self.SimulinkSocket(self.main)
             
         # Continuously reads samples from the WNet and (optionally) writes them to a .txt or .csv file.
         def CollectDataThread(self):
@@ -471,6 +487,7 @@ class WirelessFTDemoMainScreenController(object):
             import threading
             
             th = threading.Thread(target=self.run)
+            th.daemon = True
             th.start()
         
         # Begin reading records.
@@ -493,6 +510,9 @@ class WirelessFTDemoMainScreenController(object):
                     self.warningShown = False # Response recieved, reset the message flag.
                     for s in samples: # For each sample block in the UDP data block,                        
                         self.main.CalculateDataBlockStatistices(s) # calculate statistics.
+                        
+                        self.simulinkLink.addToQueue(self.main, s) # Sending to Simulink
+                        
                         ######m_sampleProperty.set(s) # Put the data where the listener can plot it.
                         if self.main.m_collectingData:
                             self.main.WriteDataBlockToFile(s)
@@ -524,6 +544,8 @@ class WirelessFTDemoMainScreenController(object):
                             print 'Connection lost, attempting to re-establish UDP ...'
                             self.warningShown = True
             self.main.m_threadActive = False
+            self.simulinkLink.stop()
+        
                         
                         
     def CalculateDataBlockStatistices(self, s):
@@ -549,7 +571,7 @@ class WirelessFTDemoMainScreenController(object):
     
     def WriteDataBlockToFile(self, s):
         
-        self.m_bufferedWriter.write('%d, %2x, %d, %8x, %8x, %d' %(s.getTimeStamp(), s.getSensorMask(), s.getBatteryLevel(), s.getStatusCode1(), s.getStatusCode2(), s.getSequence()))
+        self.m_bufferedWriter.write('%.6f, %2x, %d, %8x, %8x, %d, %.3f' %(s.getTimeStamp(), s.getSensorMask(), s.getBatteryLevel(), s.getStatusCode1(), s.getStatusCode2(), s.getSequence(), s.getLatency()))
         
         for transducer in range(0, self.WirelessFTDemoModel.WirelessFTDemoModel.MAX_SENSORS): # For each Transducer,
             if self.m_model.m_sensorActive[transducer]: # If this Transducer is active,
@@ -560,6 +582,11 @@ class WirelessFTDemoMainScreenController(object):
                 data = self.matrixMult(self.m_profile.getTransformationMatrix(transducer), getFtOrGageData)
                 for axis in range(0, self.WirelessFTDemoModel.WirelessFTDemoModel.NUM_AXES): # For each channel,
                     value = data[axis][0] # get the data value.
+                    # Multiplying reading my conversion factor
+                    if axis < 3:
+                        value = value * self.forceCF
+                    else:
+                        value = value * self.torqueCF
                     self.m_bufferedWriter.write(', ' + str(value)) # Save converted value
         self.m_bufferedWriter.write('\n')
     
@@ -586,6 +613,9 @@ class WirelessFTDemoMainScreenController(object):
         
     ''' Closes the file to which data is being collected and stops writing data. '''
     def stopCollectingData(self):
+        
+        print 'Stopping load cell data collection...'
+        
         self.m_collectingData = False
         self.m_LastPacketTime = self.time.time()*1000
         self.m_packets        = 0
@@ -628,6 +658,8 @@ class WirelessFTDemoMainScreenController(object):
         self.MIN_UDP_RATE =    5
         self.MAX_UDP_RATE = 4000
         self.mainWindow = mainWindow
+        
+        self.loadcellTimeStamp = 0
         
         self.m_model = self.WirelessFTDemoModel.WirelessFTDemoModel(self.mainWindow) # The application model.
     
