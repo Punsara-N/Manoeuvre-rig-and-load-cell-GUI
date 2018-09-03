@@ -121,7 +121,11 @@ class WirelessFTDemoModel:
         
         self.m_sensorAddressOrHostName      = ipAddress
         self.m_sensor                       = self.WirelessFTSensor.WirelessFTSensor(self.mainWindow)
-        self.m_sensor.WirelessFTSensor(self.m_sensorAddressOrHostName)
+        connected = self.m_sensor.WirelessFTSensor(self.m_sensorAddressOrHostName) # Creates UDP and telnet sockets
+        
+        if not connected:
+            return False
+        
         self.m_flagReadStreaming            = True
     
         ''' Ensure the active transducers match the xpwr commands sent. '''

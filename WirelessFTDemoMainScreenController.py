@@ -275,8 +275,9 @@ class WirelessFTDemoMainScreenController(object):
         
         # PROFILE SETTINGS
         print 'Loading profile: ' + str(self.profile_name)
+        print '----------------------------------'
         print 'Profile settings:'
-        print '-----------------'
+        print '----------------------------------'
         print 'Active Calibration: ' + str(self.m_profile.getActiveCalibration(0))
         print 'Calibration: ' + str(self.m_profile.getCalibrationCommand(0))
         print 'Displacement Units: ' + str(self.m_profile.getDisplacementUnits(0))
@@ -293,11 +294,17 @@ class WirelessFTDemoMainScreenController(object):
         print 'Transducer: ' + str(self.m_profile.getTransducerCommand(0))
         print 'Transformation Matrix: ' + str(self.m_profile.getTransformationMatrix(0))
         print  'XPWR: ' + str(self.m_profile.getXPWRCommand(0))
+        print '----------------------------------'
         
         if not self.m_connected: # and len(self.devices)>0:
             try:
                 
-                self.m_model.connect(ip, self.m_profile, self.m_saveProfile, self.m_controller)
+                connected = self.m_model.connect(ip, self.m_profile, self.m_saveProfile, self.m_controller)
+                
+                if not connected:
+                    self.connectingFailed = True
+                    self.m_connected = False
+                    return False
 
                 print 'Connected.'                
                 

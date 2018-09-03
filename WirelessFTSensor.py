@@ -44,6 +44,7 @@ class WirelessFTSensor:
         self.m_sensorAddress        = '' # The host name or IP address of the WNet.
         self.WirelessFTSensorSampleCommand = WirelessFTSensorSampleCommand.WirelessFTSensorSampleCommand()
         self.WirelessFTSample       = WirelessFTSample.WirelessFTSample()
+        self.connected              = False
         
         self.mainWindow = mainWindow
 
@@ -71,7 +72,8 @@ class WirelessFTSensor:
     
     ''' Constructor that initializes WNet address and network connections. '''
     def WirelessFTSensor(self, hostNameOrIPAddress):
-        self.setSensorAddress(hostNameOrIPAddress)
+        connected = self.setSensorAddress(hostNameOrIPAddress)
+        return connected
         
     ''' Closes existing sockets and opens new ones to connect to the specified Wireless F/T sensor. '''
     def initSockets(self, hostNameOrIPAddress):
@@ -97,6 +99,8 @@ class WirelessFTSensor:
         except Exception as e:
             print('Failed to create UDP socket.')
             print(e)
+            self.connected = False
+            return self.connected
         
         self.resetTelnetSocket() # Make very sure that the telnet socket is available for use.
         
@@ -104,14 +108,20 @@ class WirelessFTSensor:
         try:
             self.m_telnetSocket = self.telnetlib.Telnet(sensorAddress, self.TELNET_PORT, self.TCP_TIMEOUT)
         except Exception as e:
-            print('Failed to create telnet port.')
+            print('Failed to create telnet port! Error:')
             print(e)
-            self.initSockets(self.m_sensorAddress)
+            #self.initSockets(self.m_sensorAddress)
+            self.connected = False
+            return self.connected
+        
+        self.connected = True
         
         try:
             self.time.sleep(0.1)
         except:
             pass # Do nothing.
+        
+        return self.connected
     
     ''' Gets the IP address or hostname of the currently-connected WNet. '''
     def getSensorAddress(self):
@@ -120,7 +130,8 @@ class WirelessFTSensor:
     ''' Attempts to connect to a given IP address or hostname and sets the current address to it if it was successful. '''
     def setSensorAddress(self, val):
         self.m_sensorAddress = val
-        self.initSockets(self.m_sensorAddress)
+        connected = self.initSockets(self.m_sensorAddress)
+        return connected
     
     ''' Sends the command to start streaming UDP samples. '''
     def startStreamingData(self): # Sends the command to start streaming UDP samples.
@@ -139,9 +150,9 @@ class WirelessFTSensor:
                     self.time.sleep(0.2) # Give the WNet time to close and reopen the socket.
                 except: # If we are interrupted during this delay,
                     pass # Do nothing.
-                print 'Telnet socket reset. %s %s' % (self.m_udpSocket, self.m_sensorAddress)
+                print 'Telnet socket reset. (%s) (%i/3)' % (self.m_sensorAddress, i+1)
             except Exception as e:
-                print("Failed to reset telnet socket!")
+                print("Failed to reset telnet socket! Error:")
                 print(e)
                 
         return

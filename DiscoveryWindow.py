@@ -14,13 +14,13 @@ class discoveryFrame(wx.Frame):
     def basicGUI(self):
         
         ''' Window title. '''
-        self.SetTitle('Device discovery')
+        self.SetTitle('Device Discovery')
         
         ''' Panel. '''
         panel = wx.Panel(self)
         self.text = wx.StaticText(panel, label='Searching...', pos=(50,25))        
         self.listbox = wx.ListBox(panel, pos=(50,50), size=(700,100), choices=['Waiting...'])
-        buttonOk = wx.Button(panel, label='Ok', pos=(50+225,170), size=(100,30))
+        buttonOk = wx.Button(panel, label='OK', pos=(50+225,170), size=(100,30))
         buttonOk.Bind(wx.EVT_BUTTON, self.Ok)
         buttonCancel = wx.Button(panel, label='Cancel', pos=(200+225,170), size=(100,30))
         buttonCancel.Bind(wx.EVT_BUTTON, self.Cancel)
