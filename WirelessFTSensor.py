@@ -95,7 +95,7 @@ class WirelessFTSensor:
             #self.m_udpSocket.setblocking(0)
             #self.m_udpSocket.bind((hostNameOrIPAddress, self.WirelessFTSensorSampleCommand.UDP_SERVER_PORT))
             self.m_udpSocket.setsockopt(self.socket.SOL_SOCKET, self.socket.SO_REUSEADDR, 1) # This allows the address/port to be reused immediately instead of it being stuck in the TIME_WAIT state for several minutes, waiting for late packets to arrive.
-            self.m_udpSocket.bind(('0.0.0.0', self.WirelessFTSensorSampleCommand.UDP_SERVER_PORT))
+            self.m_udpSocket.bind(('0.0.0.0', self.WirelessFTSensorSampleCommand.UDP_SERVER_PORT)) # Port: 49152
         except Exception as e:
             print('Failed to create UDP socket.')
             print(e)

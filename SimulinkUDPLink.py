@@ -54,13 +54,17 @@ class SimulinkSocket(object):
                         loads[axis] = value * self.forceCF
                     else:
                         loads[axis] = value * self.torqueCF
+                time = item.getTimeStamp()
+                
+                data = loads
+                data.append(time)
         
-        self.queue.put_nowait(loads)
+        self.queue.put_nowait(data)
 
     def sendData(self, data):
         
-        self.tx_pack = struct.Struct("<6d") # little-endian 6 doubles
-        self.data = self.tx_pack.pack(data[0],data[1],data[2],data[3],data[4],data[5])
+        self.tx_pack = struct.Struct("<7d") # little-endian 6 doubles
+        self.data = self.tx_pack.pack(data[0],data[1],data[2],data[3],data[4],data[5],data[6])
         self.soc.sendto(self.data, self.addr)
         
     def mainLoop(self):

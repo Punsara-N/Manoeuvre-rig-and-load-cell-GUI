@@ -849,7 +849,7 @@ Unused bits must be set to 0.  '''))
         self.panel11 = wx.Panel(self)
         self.panel11.SetDoubleBuffered(True)
         
-        text = "Packets: \nPacket rate (Hz): \nClock offset + delay (ms): \nDrop events: \nPackets dropped: \nDrop rate (%): \nOut-of-orders: \nDuplicates: \nTime:"
+        text = "Packets: \nPacket rate (Hz): \nClock offset + delay (ms): \nDrop events: \nPackets dropped: \nDrop rate (%): \nOut-of-orders: \nDuplicates: \nTime (s):"
         self.textLoadCellPacketStats = wx.StaticText(self.panel11, label = text, style = wx.ALIGN_LEFT)
         data = " ...\n ...\n ...\n ...\n ...\n ...\n ...\n ...\n ..."
         self.textStats = wx.StaticText(self.panel11, label = data, style = wx.ALIGN_LEFT)

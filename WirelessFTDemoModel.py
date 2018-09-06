@@ -162,6 +162,8 @@ class WirelessFTDemoModel:
         except Exception as e:
             self.logging.critical(e)
             
+        return True
+            
     '''
     Sets the time and date within the WNet to
     match the time of the Java Virtual Machine.

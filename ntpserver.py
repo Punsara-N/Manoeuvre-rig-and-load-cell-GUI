@@ -373,9 +373,13 @@ class NTPServer():
         proto = addrInfo[2]
         addr = addrInfo[4]
         
-        socNTP = socket.socket(family, typee, proto)
-        socNTP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # This allows the address/port to be reused immediately instead of it being stuck in the TIME_WAIT state for several minutes, waiting for late packets to arrive.
-        socNTP.bind(addr)
+        try:
+            socNTP = socket.socket(family, typee, proto)
+            socNTP.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # This allows the address/port to be reused immediately instead of it being stuck in the TIME_WAIT state for several minutes, waiting for late packets to arrive.
+            socNTP.bind(addr)
+        except Exception as error:
+            print error
+            print "Make sure W32Time service is stopped (services can be stopped via task manager)."
         
         if self.printFlag:            
             print "local socket: ", socNTP.getsockname();
